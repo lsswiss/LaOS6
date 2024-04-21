@@ -23,6 +23,11 @@ Fan Mail
 Dear QBasic Community! Thank you very much for all of your fan mail! I appreciate it very much.
 
 
+How to find further information about QBasic development?
+=========================================================
+
+If you have any questions about QBasic development in 2024, I recommend you to consult the Site of Thomas Antoni at http://www.antonis.de/.
+
 Support
 ========
 
