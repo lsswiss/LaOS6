@@ -6,6 +6,12 @@ LaOS Version 6.13
 Dies ist LaOS Version 6.13
 Installieren Sie LaOS mit INSTALL.BAT oder INSTALL.EXE
 
+How to Install
+==============
+
+Open MSDOS or a DosBox and copy the content of the folder "LSYS" to C:\LaOS\. Start QBasic.exe and Load Start.bas, and then Run it.   
+
+
 How to Code with LaOS 6
 ========================
 
