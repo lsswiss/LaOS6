@@ -1,0 +1,2620 @@
+DECLARE SUB AltTaste ()
+DECLARE SUB TabTaste ()
+DECLARE FUNCTION GetFile$ ()
+DECLARE SUB MenuBox (Zeilen!, Spalten!, Caption$)
+DECLARE FUNCTION LinkIt$ ()
+'LaOS Version 2.00 Copyright (C) Urs Langmeier, New BCO
+'Sommer 1998, Version ohne ScreenText und ohne Run-on-command
+
+'Entwickelt unter QBASIC von Urs Langmeier
+'Idee & Programmierung: Urs Langmeier
+
+'Alle Urheber- und Leistungsschutzrechte vorbehalten. Der Code darf nicht un-
+'erlaubt kopiert oder verkauft werden.
+
+
+
+DECLARE FUNCTION Drivelist$ (Nr!)
+DECLARE SUB Switchdrive (lw$)
+DECLARE FUNCTION FileChoose$ (Art1$)
+DECLARE FUNCTION DosFile$ (Kennung$, InOrdner$)
+DECLARE SUB ExitBox (x!, y!)
+DECLARE FUNCTION exist! (p$)
+DECLARE SUB TextBox (Zeilen!, Spalten!, Text$, Break!)
+DECLARE SUB Register (z!, s!, zu!, su!, Text$)
+DECLARE SUB FrameWindow (a!, B!, c!, d!, del!)
+DECLARE SUB Echo (Text$)
+DECLARE SUB GetInp ()
+DECLARE SUB Control (Zeilen!, Spalten!, Text$)
+DECLARE SUB CLW ()
+DECLARE FUNCTION Gerade! (Zahl!)
+DECLARE FUNCTION IsExist! (Datei$, InOrdner$)
+DECLARE FUNCTION ComboBox$ (Nr!, z!, s!, zu!, su!)
+DECLARE FUNCTION IsEmptyBox! (Ordner$)
+DECLARE FUNCTION IsExistBox! (Box$)
+DECLARE FUNCTION Trim$ (Variable$, Trennzeichen$, a!)
+DECLARE FUNCTION MenuInt$ (Item$, Trennzeichen$)
+DECLARE SUB Dialog (Caption$)
+DECLARE SUB LoadSymbol (name$, Kennung$)
+DECLARE SUB ShowSymbols ()
+DECLARE SUB Menuact (Menu$)
+DECLARE FUNCTION SDate$ ()
+DECLARE SUB TimeLock (Status!)
+DECLARE SUB StoppUhrBeep (Uhr!)
+DECLARE SUB Symbact (Symbol$)
+DECLARE FUNCTION Ltext$ (Text$, ab!)
+DECLARE FUNCTION GetKey$ ()
+DECLARE SUB ClearControls (Connect!)
+DECLARE SUB NextControl ()
+DECLARE SUB LastControl ()
+DECLARE SUB Activate (Ctrl$)
+DECLARE FUNCTION InputBox$ (Zeilen!, Spalten!, Text$, Break!, MaxDown!)
+
+ON ERROR GOTO fehlernext
+SCREEN 9
+VIEW PRINT 1 TO 25
+'    -> 640 x 350 Grafik
+'    ˛ 80 x 25 oder 80 x 43 Textformat, 8 x 14 oder 8 x 8 Zeichenfeldgrî·e
+'    ˛ Zuweisung von 16 Farben zu 4 Attributen (64 KB Adapterspeicher) oder
+'      64 Farben zu 16 Attributen (mehr als 64 KB Adapterspeicher)
+'    ˛ Falls 64KB EGA Adapterspeicher, 1 Bildschirmspeicherseite (0);
+'      ansonsten 2 Seiten (0-1)
+
+DIM SHARED Hintergrund(456) AS LONG
+DIM SHARED Stoppuhr(1 TO 4) AS INTEGER '1 ist Reserviert!
+DIM SHARED AlteZeit(1 TO 4) AS LONG
+DIM SHARED TextScale AS INTEGER
+DIM SHARED TextBreak AS INTEGER
+DIM SHARED Activ AS STRING
+DIM SHARED ControlNr AS INTEGER
+DIM SHARED ControlList(40) AS STRING
+DIM SHARED Break AS INTEGER
+DIM SHARED EBox.left AS INTEGER, EBox.top AS INTEGER
+DIM SHARED Left AS INTEGER, Top AS INTEGER, Right AS INTEGER, Down AS INTEGER
+DIM SHARED NextBreak AS INTEGER
+DIM SHARED ControlConnect AS INTEGER 'Zur Unterscheidung der 3 Eingabecontrols
+DIM SHARED SymbolList(201) AS STRING, SymbolNr AS INTEGER
+DIM SHARED Symb.left AS INTEGER, Symb.top AS INTEGER, Symb.total AS INTEGER
+DIM SHARED Symb.ipp AS INTEGER 'IPP=Icons par page (misst die letzte volle Seite)
+DIM SHARED Symb.count 'ZÑhlt die Symbole in der aktuellen Seite
+DIM SHARED DimY AS LONG, DimNow AS INTEGER, Symb.pnr'Nr. in der aktuellen Seite
+DIM SHARED MenuList(40) AS STRING, MenuNr AS INTEGER
+DIM SHARED Focus AS STRING
+DIM SHARED keyb AS STRING
+DIM SHARED Change(6) AS INTEGER
+DIM SHARED errorlevel AS INTEGER
+DIM SHARED Choice AS INTEGER
+DIM SHARED Combo(1 TO 1, 1 TO 100) AS STRING
+DIM SHARED Pictures(4) AS STRING
+DIM SHARED ActivItem AS STRING, DriveName AS STRING
+
+FesteEinstellungen:
+WIDTH 80, 25
+
+Einstellungen:
+DIM SHARED Fensterfarbe AS INTEGER, Randfarbe AS INTEGER, Schattenfarbe AS INTEGER, Controlfarbe AS INTEGER
+DIM SHARED Symbolactiv AS INTEGER, SymbactStil AS INTEGER, SymbolFrame AS INTEGER, SymbolColor AS INTEGER
+DIM SHARED Hintergrundfarbe  AS INTEGER, Farbe AS INTEGER, IconVerticalSpace AS INTEGER
+DIM SHARED InfoTime AS INTEGER, InfoColor  AS INTEGER, InfoFrame, Datumsformat AS INTEGER
+
+CLOSE 1: OPEN "c:\laos\config.lcg" FOR RANDOM AS 1
+GET 1, 1, Schema$
+
+DIM m(1 TO 15)
+
+IF Schema$ <> "" THEN
+
+IF LOF(1) <> 0 THEN
+CLOSE 1: OPEN "c:\laos\" + Schema$ + ".scl" FOR INPUT AS 1: LINE INPUT #1, a$
+FOR i = 1 TO 15
+INPUT #1, m(i)
+NEXT
+ELSE m(10) = 15: m(1) = 14
+END IF
+
+ELSE m(10) = 15: m(1) = 14
+END IF
+
+Fensterfarbe = m(1)'Fensterfarben
+Randfarbe = m(2)
+Schattenfarbe = m(3)
+Controlfarbe = m(4)  'SchaltflÑchenfarbe
+Symbolactiv = m(5) 'Umrahmungsfarbe des aktiven Symbols
+SymbactStil = m(6) 'Umrahmungs-Stil des aktivierten Symbols (-1=voll)
+
+SymbolFrame = m(7) 'Farbe des Symbolrahmens
+SymbolColor = m(8) 'Farbe des Symbolhintergrundes
+
+Hintergrundfarbe = m(9) 'Bildschirmfarben
+Farbe = m(10) '= Vordergrundfarbe
+
+IconVerticalSpace = m(11) 'Setzt den Vertikalen Standard-Abstand der Symbole
+                            'Auf Null gesetzt ist der Abstand genÅgend.
+InfoTime = m(12)'Setzt die zu verstreichende Zeit in Sekunden, bis die Quick-
+                  'Info erscheint. (0=Ausgeschaltet)
+InfoColor = m(13) 'Setzt die Farbe, in der der Quick-Info-Text erscheint.
+InfoFrame = m(14) 'Setzt die Farbe des Quick-Info-Rahmens.
+
+Datumsformat = m(15)
+
+ERASE m
+
+CONST Fe1 = 6, Fe2 = 4, Fe3 = 75, Fe4 = 20 'Startfensterkoordinaten
+Stoppuhr(2) = 60 '2.Stoppuhr: Bildschirmschoner
+
+
+VorStart:
+CLOSE
+VIEW
+COLOR Farbe, Hintergrundfarbe
+Switchdrive "c"
+
+Code = 0 'Legt die Ereignisverfolgung fÅr die Alt-Taste fest
+FOR i = 15 TO 19
+KEY i, CHR$(Code) + CHR$(56)
+ON KEY(i) GOSUB AltKey
+Code = Code + 32
+NEXT i
+Code = 0: i = 0
+
+
+Programm:
+'Schreiben Sie hier Ihren persînlichen Code:
+
+CLW
+DIM SHARED MenuNow AS INTEGER
+DIM SHARED TabNow AS INTEGER
+
+CLW
+
+Register 8, 30, 12, 50, "LaOS Lernprogramm"
+LOCATE 10, 37
+PRINT "Hallo."
+a = TIMER: DO: LOOP UNTIL TIMER - a > 2
+CLW
+Echo "Dies ist LaOS."
+a = TIMER: DO: LOOP UNTIL TIMER - a > 1
+Echo ""
+Echo "LaOS lÑsst sich nicht mit der Maus bedienen, nur mit der Tastatur."
+a = TIMER: DO: LOOP UNTIL TIMER - a > 1.5
+Echo "Ausnahme: Zeichnungsprogramm 'QuickDraw'"
+a = TIMER: DO: LOOP UNTIL TIMER - a > 2.2
+Echo ""
+Echo "Kennt man die wichtigsten Tasten, kann man LaOS sehr einfach bedienen."
+a = TIMER: DO: LOOP UNTIL TIMER - a > 3
+
+DIM z AS STRING
+z = CHR$(34)
+Register 10, 20, 17, 60, "LaOS Lernprogramm starten"
+Echo ""
+Echo "Frage: Sind Sie bereit fÅr das Lernprogramm?"
+Echo ""
+a$ = InputBox(0, 0, "", 4, 1)
+IF LCASE$(a$) <> "ja" THEN Dialog "Eigentlich hÑtten Sie " + z + "ja" + z + " eingeben mÅssen. Aber wir fahren trotzdem weiter."
+CLW
+Echo "Auch Sicherheitsabfragen mÅssen Sie immer mit " + z + "Ja" + z + " beantworten, falls Sie mit der Meldung einverstanden sind."
+Echo ""
+Echo "Nehmen wir jetzt an, Sie wollten eine Datei lîschen. Dann mÅssten Sie beim folgenden Dialog wieder " + z + "Ja" + z + " eingeben:"
+1501
+Register 10, 20, 17, 60, "Lîschen der Datei Max Muster"
+Echo ""
+Echo "Wollen Sie diese Datei jetzt lîschen?"
+Echo ""
+Now1 = 1
+a$ = InputBox(14, 22, "", 4, 1)
+Now1 = 0
+IF LCASE$(a$) <> "ja" AND LCASE$(a$) <> "nein " THEN Dialog "Sie mÅssen die Antwort 'Ja' eingeben, um hier weiterfahren zu kînnen!": GOTO 1501
+CLW
+TabTaste
+
+CLW
+Echo "Sie sehen einen Speichern-Dialog:"
+Echo "Auch hier wechseln Sie die Steuerelemente mit der Tab-Taste."
+TextScale = 19
+Echo "Wir nehmen also an, Sie wollten eine Datei speichern."
+Echo "DrÅcken Sie die Tab-Taste, um zwischen den verschiedenen Eingabefeldern"
+Echo "umzuschalten. Sie kînnen zum Teil aber auch die Pfeiltasten verwenden."
+Echo ""
+Echo "Wenn Sie Ihre Eingaben gemacht haben, so mÅssen Sie die Eingabetaste drÅcken."
+a$ = GetFile
+IF keyb = "esc" THEN Dialog "Sie haben Escape gedrÅckt. Das heisst fÅr mich, dass Sie doch nicht         speichern wollen." ELSE Dialog "Die Datei wÅrde jetzt gespeichert werden."
+CLW
+        AltTaste
+
+CLW
+ExitBox -1, -1
+Echo "Gratuliere! Sie haben das Lernprogramm Åberstanden!"
+Echo ""
+Echo "Unten rechts sehen Sie die Box mit dem Kreuz. Diese sogenannte Exit-Box zeigt Ihnen an, dass Sie den aktuellen Dialog mit ESCAPE beenden kînnen oder mit ESCAPE einen Schritt zurÅck machen kînnen."
+Echo ""
+Echo ""
+Echo ""
+Echo "DrÅcken Sie ESC um zu beenden!"
+DO: LOOP UNTIL INKEY$ = ""
+
+DO
+FOR r = 1 TO 80
+c = INT(RND * 15) + 1
+CIRCLE (320, 250), r, c
+NEXT r
+LOOP WHILE INKEY$ <> CHR$(27)
+
+CHAIN "C:\LAOS\RUN.BAS"
+
+SYSTEM
+TimeEreignis:
+TIMER OFF
+RETURN
+
+
+AltKey:
+IF MenuList(1) <> "" THEN Activate CHR$(0): ControlConnect = 1: Activate MenuList(1): MenuNr = 1: Activ = MenuList(1)
+RETURN
+
+fehlernext:
+errorlevel = 1
+RESUME NEXT
+
+SUB Activate (Ctrl$)
+SELECT CASE ControlConnect
+CASE 0 'Controls
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = Ctrl$
+IF a$ = "" THEN EXIT SUB
+'ControlNr = i
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1 'Menus
+i = 0
+Activ = Ctrl$
+DO
+i = i + 1
+a$ = MenuList(i)
+IF a$ = "" THEN EXIT DO
+Menuact a$
+LOOP UNTIL a$ = ""
+
+
+
+CASE 2 'Symbole
+i = 0
+Activ = Ctrl$
+'i = Symb.total * Symb.page
+DO
+i = i + 1
+a$ = SymbolList(i)
+IF MID$(a$, 15) = Activ THEN Activ = a$
+IF a$ = "" THEN EXIT DO
+Symbact a$
+LOOP UNTIL a$ = ""
+END SELECT
+END SUB
+
+SUB AltTaste
+LINE (20, 115)-(120, 155), 1, B
+LINE (120, 115)-(132, 107), 1
+LINE (132, 107)-(132, 167), 1
+LINE (132, 167)-(120, 155), 1
+LINE (132, 167)-(12, 167), 1
+LINE (12, 167)-(20, 155), 1
+LINE (12, 167)-(12, 107), 1
+LINE (12, 107)-(20, 115), 1
+LINE (12, 107)-(132, 107), 1
+PAINT (126, 134), 8, 1
+PAINT (72, 161), 8, 1
+LINE (71, 100)-(171, 80), 1
+LINE (171, 80)-(61, 80), 1
+LINE (61, 80)-(61, 10), 1
+LINE (61, 10)-(431, 10), 1
+LINE (431, 10)-(431, 80), 1
+LINE (431, 80)-(191, 80), 1
+LINE (191, 80)-(71, 100), 1
+LINE (30, 120)-(31, 121), 1, BF
+LINE (28, 122)-(29, 123), 1, BF
+LINE (32, 122)-(33, 123), 1, BF
+LINE (26, 124)-(27, 125), 1, BF
+LINE (34, 124)-(35, 125), 1, BF
+LINE (26, 126)-(27, 127), 1, BF
+LINE (34, 126)-(35, 127), 1, BF
+LINE (26, 128)-(27, 129), 1, BF
+LINE (28, 128)-(29, 129), 1, BF
+LINE (30, 128)-(31, 129), 1, BF
+LINE (32, 128)-(33, 129), 1, BF
+LINE (34, 128)-(35, 129), 1, BF
+LINE (26, 130)-(27, 131), 1, BF
+LINE (34, 130)-(35, 131), 1, BF
+LINE (26, 132)-(27, 133), 1, BF
+LINE (34, 132)-(35, 133), 1, BF
+LINE (40, 120)-(41, 121), 1, BF
+LINE (40, 122)-(41, 123), 1, BF
+LINE (40, 124)-(41, 125), 1, BF
+LINE (40, 126)-(41, 127), 1, BF
+LINE (40, 128)-(41, 129), 1, BF
+LINE (40, 130)-(41, 131), 1, BF
+LINE (40, 132)-(41, 133), 1, BF
+LINE (42, 132)-(43, 133), 1, BF
+LINE (49, 122)-(50, 123), 1, BF
+LINE (49, 124)-(50, 125), 1, BF
+LINE (47, 126)-(48, 127), 1, BF
+LINE (49, 126)-(50, 127), 1, BF
+LINE (51, 126)-(52, 127), 1, BF
+LINE (49, 128)-(50, 129), 1, BF
+LINE (49, 130)-(50, 131), 1, BF
+LINE (49, 132)-(50, 133), 1, BF
+LINE (51, 132)-(52, 133), 1, BF
+LINE (71, 20)-(73, 22), 1, BF
+LINE (83, 20)-(85, 22), 1, BF
+LINE (71, 23)-(73, 25), 1, BF
+LINE (74, 23)-(76, 25), 1, BF
+LINE (80, 23)-(82, 25), 1, BF
+LINE (83, 23)-(85, 25), 1, BF
+LINE (71, 26)-(73, 28), 1, BF
+LINE (74, 26)-(76, 28), 1, BF
+LINE (80, 26)-(82, 28), 1, BF
+LINE (83, 26)-(85, 28), 1, BF
+LINE (71, 29)-(73, 31), 1, BF
+LINE (77, 29)-(79, 31), 1, BF
+LINE (83, 29)-(85, 31), 1, BF
+LINE (71, 32)-(73, 34), 1, BF
+LINE (77, 32)-(79, 34), 1, BF
+LINE (83, 32)-(85, 34), 1, BF
+LINE (71, 35)-(73, 37), 1, BF
+LINE (83, 35)-(85, 37), 1, BF
+LINE (71, 38)-(73, 40), 1, BF
+LINE (83, 38)-(85, 40), 1, BF
+LINE (95, 20)-(97, 22), 1, BF
+LINE (95, 29)-(97, 31), 1, BF
+LINE (95, 32)-(97, 34), 1, BF
+LINE (95, 35)-(97, 37), 1, BF
+LINE (95, 38)-(97, 40), 1, BF
+LINE (113, 23)-(115, 25), 1, BF
+LINE (113, 26)-(115, 28), 1, BF
+LINE (110, 29)-(112, 31), 1, BF
+LINE (113, 29)-(115, 31), 1, BF
+LINE (116, 29)-(118, 31), 1, BF
+LINE (113, 32)-(115, 34), 1, BF
+LINE (113, 35)-(115, 37), 1, BF
+LINE (113, 38)-(115, 40), 1, BF
+LINE (116, 38)-(118, 40), 1, BF
+LINE (149, 20)-(151, 22), 1, BF
+LINE (146, 23)-(148, 25), 1, BF
+LINE (152, 23)-(154, 25), 1, BF
+LINE (143, 26)-(145, 28), 1, BF
+LINE (155, 26)-(157, 28), 1, BF
+LINE (143, 29)-(145, 31), 1, BF
+LINE (155, 29)-(157, 31), 1, BF
+LINE (143, 32)-(145, 34), 1, BF
+LINE (146, 32)-(148, 34), 1, BF
+LINE (149, 32)-(151, 34), 1, BF
+LINE (152, 32)-(154, 34), 1, BF
+LINE (155, 32)-(157, 34), 1, BF
+LINE (143, 35)-(145, 37), 1, BF
+LINE (155, 35)-(157, 37), 1, BF
+LINE (143, 38)-(145, 40), 1, BF
+LINE (155, 38)-(157, 40), 1, BF
+LINE (161, 20)-(163, 22), 1, BF
+LINE (161, 23)-(163, 25), 1, BF
+LINE (161, 26)-(163, 28), 1, BF
+LINE (161, 29)-(163, 31), 1, BF
+LINE (161, 32)-(163, 34), 1, BF
+LINE (161, 35)-(163, 37), 1, BF
+LINE (161, 38)-(163, 40), 1, BF
+LINE (164, 38)-(166, 40), 1, BF
+LINE (167, 38)-(169, 40), 1, BF
+LINE (170, 38)-(172, 40), 1, BF
+LINE (173, 38)-(175, 40), 1, BF
+LINE (179, 20)-(181, 22), 1, BF
+LINE (182, 20)-(184, 22), 1, BF
+LINE (185, 20)-(187, 22), 1, BF
+LINE (188, 20)-(190, 22), 1, BF
+LINE (191, 20)-(193, 22), 1, BF
+LINE (185, 23)-(187, 25), 1, BF
+LINE (185, 26)-(187, 28), 1, BF
+LINE (185, 29)-(187, 31), 1, BF
+LINE (185, 32)-(187, 34), 1, BF
+LINE (185, 35)-(187, 37), 1, BF
+LINE (185, 38)-(187, 40), 1, BF
+LINE (215, 20)-(217, 22), 1, BF
+LINE (215, 23)-(217, 25), 1, BF
+LINE (215, 26)-(217, 28), 1, BF
+LINE (224, 26)-(226, 28), 1, BF
+LINE (215, 29)-(217, 31), 1, BF
+LINE (221, 29)-(223, 31), 1, BF
+LINE (215, 32)-(217, 34), 1, BF
+LINE (218, 32)-(220, 34), 1, BF
+LINE (215, 35)-(217, 37), 1, BF
+LINE (221, 35)-(223, 37), 1, BF
+LINE (215, 38)-(217, 40), 1, BF
+LINE (224, 38)-(226, 40), 1, BF
+LINE (236, 23)-(238, 25), 1, BF
+LINE (239, 23)-(241, 25), 1, BF
+LINE (233, 26)-(235, 28), 1, BF
+LINE (242, 26)-(244, 28), 1, BF
+LINE (242, 29)-(244, 31), 1, BF
+LINE (236, 32)-(238, 34), 1, BF
+LINE (239, 32)-(241, 34), 1, BF
+LINE (242, 32)-(244, 34), 1, BF
+LINE (233, 35)-(235, 37), 1, BF
+LINE (242, 35)-(244, 37), 1, BF
+LINE (236, 38)-(238, 40), 1, BF
+LINE (239, 38)-(241, 40), 1, BF
+LINE (245, 38)-(247, 40), 1, BF
+LINE (251, 29)-(253, 31), 1, BF
+LINE (257, 29)-(259, 31), 1, BF
+LINE (260, 29)-(262, 31), 1, BF
+LINE (251, 32)-(253, 34), 1, BF
+LINE (254, 32)-(256, 34), 1, BF
+LINE (260, 32)-(262, 34), 1, BF
+LINE (251, 35)-(253, 37), 1, BF
+LINE (260, 35)-(262, 37), 1, BF
+LINE (251, 38)-(253, 40), 1, BF
+LINE (260, 38)-(262, 40), 1, BF
+LINE (269, 29)-(271, 31), 1, BF
+LINE (275, 29)-(277, 31), 1, BF
+LINE (278, 29)-(280, 31), 1, BF
+LINE (269, 32)-(271, 34), 1, BF
+LINE (272, 32)-(274, 34), 1, BF
+LINE (278, 32)-(280, 34), 1, BF
+LINE (269, 35)-(271, 37), 1, BF
+LINE (278, 35)-(280, 37), 1, BF
+LINE (269, 38)-(271, 40), 1, BF
+LINE (278, 38)-(280, 40), 1, BF
+LINE (305, 29)-(307, 31), 1, BF
+LINE (317, 29)-(319, 31), 1, BF
+LINE (305, 32)-(307, 34), 1, BF
+LINE (308, 32)-(310, 34), 1, BF
+LINE (314, 32)-(316, 34), 1, BF
+LINE (317, 32)-(319, 34), 1, BF
+LINE (305, 35)-(307, 37), 1, BF
+LINE (311, 35)-(313, 37), 1, BF
+LINE (317, 35)-(319, 37), 1, BF
+LINE (305, 38)-(307, 40), 1, BF
+LINE (317, 38)-(319, 40), 1, BF
+LINE (326, 23)-(328, 25), 1, BF
+LINE (329, 23)-(331, 25), 1, BF
+LINE (323, 26)-(325, 28), 1, BF
+LINE (332, 26)-(334, 28), 1, BF
+LINE (332, 29)-(334, 31), 1, BF
+LINE (326, 32)-(328, 34), 1, BF
+LINE (329, 32)-(331, 34), 1, BF
+LINE (332, 32)-(334, 34), 1, BF
+LINE (323, 35)-(325, 37), 1, BF
+LINE (332, 35)-(334, 37), 1, BF
+LINE (326, 38)-(328, 40), 1, BF
+LINE (329, 38)-(331, 40), 1, BF
+LINE (335, 38)-(337, 40), 1, BF
+LINE (341, 29)-(343, 31), 1, BF
+LINE (347, 29)-(349, 31), 1, BF
+LINE (350, 29)-(352, 31), 1, BF
+LINE (341, 32)-(343, 34), 1, BF
+LINE (344, 32)-(346, 34), 1, BF
+LINE (350, 32)-(352, 34), 1, BF
+LINE (341, 35)-(343, 37), 1, BF
+LINE (350, 35)-(352, 37), 1, BF
+LINE (341, 38)-(343, 40), 1, BF
+LINE (350, 38)-(352, 40), 1, BF
+LINE (74, 53)-(76, 55), 1, BF
+LINE (77, 53)-(79, 55), 1, BF
+LINE (71, 56)-(73, 58), 1, BF
+LINE (80, 56)-(82, 58), 1, BF
+LINE (80, 59)-(82, 61), 1, BF
+LINE (74, 62)-(76, 64), 1, BF
+LINE (77, 62)-(79, 64), 1, BF
+LINE (80, 62)-(82, 64), 1, BF
+LINE (71, 65)-(73, 67), 1, BF
+LINE (80, 65)-(82, 67), 1, BF
+LINE (74, 68)-(76, 70), 1, BF
+LINE (77, 68)-(79, 70), 1, BF
+LINE (83, 68)-(85, 70), 1, BF
+LINE (92, 50)-(94, 52), 1, BF
+LINE (92, 53)-(94, 55), 1, BF
+LINE (92, 56)-(94, 58), 1, BF
+LINE (92, 59)-(94, 61), 1, BF
+LINE (92, 62)-(94, 64), 1, BF
+LINE (92, 65)-(94, 67), 1, BF
+LINE (92, 68)-(94, 70), 1, BF
+LINE (95, 68)-(97, 70), 1, BF
+LINE (110, 50)-(112, 52), 1, BF
+LINE (110, 53)-(112, 55), 1, BF
+LINE (110, 56)-(112, 58), 1, BF
+LINE (110, 59)-(112, 61), 1, BF
+LINE (110, 62)-(112, 64), 1, BF
+LINE (110, 65)-(112, 67), 1, BF
+LINE (110, 68)-(112, 70), 1, BF
+LINE (113, 68)-(115, 70), 1, BF
+LINE (128, 56)-(130, 58), 1, BF
+LINE (131, 56)-(133, 58), 1, BF
+LINE (125, 59)-(127, 61), 1, BF
+LINE (134, 59)-(136, 61), 1, BF
+LINE (125, 62)-(127, 64), 1, BF
+LINE (128, 62)-(130, 64), 1, BF
+LINE (131, 62)-(133, 64), 1, BF
+LINE (125, 65)-(127, 67), 1, BF
+LINE (128, 68)-(130, 70), 1, BF
+LINE (131, 68)-(133, 70), 1, BF
+LINE (161, 50)-(163, 52), 1, BF
+LINE (173, 50)-(175, 52), 1, BF
+LINE (161, 53)-(163, 55), 1, BF
+LINE (164, 53)-(166, 55), 1, BF
+LINE (170, 53)-(172, 55), 1, BF
+LINE (173, 53)-(175, 55), 1, BF
+LINE (161, 56)-(163, 58), 1, BF
+LINE (164, 56)-(166, 58), 1, BF
+LINE (170, 56)-(172, 58), 1, BF
+LINE (173, 56)-(175, 58), 1, BF
+LINE (161, 59)-(163, 61), 1, BF
+LINE (167, 59)-(169, 61), 1, BF
+LINE (173, 59)-(175, 61), 1, BF
+LINE (161, 62)-(163, 64), 1, BF
+LINE (167, 62)-(169, 64), 1, BF
+LINE (173, 62)-(175, 64), 1, BF
+LINE (161, 65)-(163, 67), 1, BF
+LINE (173, 65)-(175, 67), 1, BF
+LINE (161, 68)-(163, 70), 1, BF
+LINE (173, 68)-(175, 70), 1, BF
+LINE (182, 56)-(184, 58), 1, BF
+LINE (185, 56)-(187, 58), 1, BF
+LINE (179, 59)-(181, 61), 1, BF
+LINE (188, 59)-(190, 61), 1, BF
+LINE (179, 62)-(181, 64), 1, BF
+LINE (182, 62)-(184, 64), 1, BF
+LINE (185, 62)-(187, 64), 1, BF
+LINE (179, 65)-(181, 67), 1, BF
+LINE (182, 68)-(184, 70), 1, BF
+LINE (185, 68)-(187, 70), 1, BF
+LINE (197, 59)-(199, 61), 1, BF
+LINE (203, 59)-(205, 61), 1, BF
+LINE (206, 59)-(208, 61), 1, BF
+LINE (197, 62)-(199, 64), 1, BF
+LINE (200, 62)-(202, 64), 1, BF
+LINE (206, 62)-(208, 64), 1, BF
+LINE (197, 65)-(199, 67), 1, BF
+LINE (206, 65)-(208, 67), 1, BF
+LINE (197, 68)-(199, 70), 1, BF
+LINE (206, 68)-(208, 70), 1, BF
+LINE (218, 53)-(220, 55), 1, BF
+LINE (224, 53)-(226, 55), 1, BF
+LINE (218, 59)-(220, 61), 1, BF
+LINE (224, 59)-(226, 61), 1, BF
+LINE (218, 62)-(220, 64), 1, BF
+LINE (224, 62)-(226, 64), 1, BF
+LINE (218, 65)-(220, 67), 1, BF
+LINE (224, 65)-(226, 67), 1, BF
+LINE (218, 68)-(220, 70), 1, BF
+LINE (221, 68)-(223, 70), 1, BF
+LINE (227, 68)-(229, 70), 1, BF
+LINE (236, 56)-(238, 58), 1, BF
+LINE (239, 56)-(241, 58), 1, BF
+LINE (242, 56)-(244, 58), 1, BF
+LINE (236, 59)-(238, 61), 1, BF
+LINE (236, 62)-(238, 64), 1, BF
+LINE (239, 62)-(241, 64), 1, BF
+LINE (242, 62)-(244, 64), 1, BF
+LINE (242, 65)-(244, 67), 1, BF
+LINE (236, 68)-(238, 70), 1, BF
+LINE (239, 68)-(241, 70), 1, BF
+LINE (242, 68)-(244, 70), 1, BF
+LINE (272, 53)-(274, 55), 1, BF
+LINE (275, 53)-(277, 55), 1, BF
+LINE (269, 56)-(271, 58), 1, BF
+LINE (278, 56)-(280, 58), 1, BF
+LINE (278, 59)-(280, 61), 1, BF
+LINE (272, 62)-(274, 64), 1, BF
+LINE (275, 62)-(277, 64), 1, BF
+LINE (278, 62)-(280, 64), 1, BF
+LINE (269, 65)-(271, 67), 1, BF
+LINE (278, 65)-(280, 67), 1, BF
+LINE (272, 68)-(274, 70), 1, BF
+LINE (275, 68)-(277, 70), 1, BF
+LINE (281, 68)-(283, 70), 1, BF
+LINE (287, 59)-(289, 61), 1, BF
+LINE (293, 59)-(295, 61), 1, BF
+LINE (296, 59)-(298, 61), 1, BF
+LINE (287, 62)-(289, 64), 1, BF
+LINE (290, 62)-(292, 64), 1, BF
+LINE (296, 62)-(298, 64), 1, BF
+LINE (287, 65)-(289, 67), 1, BF
+LINE (296, 65)-(298, 67), 1, BF
+LINE (287, 68)-(289, 70), 1, BF
+LINE (296, 68)-(298, 70), 1, BF
+LINE (305, 59)-(307, 61), 1, BF
+LINE (317, 59)-(319, 61), 1, BF
+LINE (305, 62)-(307, 64), 1, BF
+LINE (311, 62)-(313, 64), 1, BF
+LINE (317, 62)-(319, 64), 1, BF
+LINE (305, 65)-(307, 67), 1, BF
+LINE (311, 65)-(313, 67), 1, BF
+LINE (317, 65)-(319, 67), 1, BF
+LINE (308, 68)-(310, 70), 1, BF
+LINE (314, 68)-(316, 70), 1, BF
+LINE (326, 53)-(328, 55), 1, BF
+LINE (332, 53)-(334, 55), 1, BF
+LINE (329, 59)-(331, 61), 1, BF
+LINE (332, 59)-(334, 61), 1, BF
+LINE (326, 62)-(328, 64), 1, BF
+LINE (332, 62)-(334, 64), 1, BF
+LINE (326, 65)-(328, 67), 1, BF
+LINE (332, 65)-(334, 67), 1, BF
+LINE (329, 68)-(331, 70), 1, BF
+LINE (332, 68)-(334, 70), 1, BF
+LINE (341, 50)-(343, 52), 1, BF
+LINE (341, 53)-(343, 55), 1, BF
+LINE (341, 56)-(343, 58), 1, BF
+LINE (341, 59)-(343, 61), 1, BF
+LINE (347, 59)-(349, 61), 1, BF
+LINE (350, 59)-(352, 61), 1, BF
+LINE (341, 62)-(343, 64), 1, BF
+LINE (344, 62)-(346, 64), 1, BF
+LINE (350, 62)-(352, 64), 1, BF
+LINE (341, 65)-(343, 67), 1, BF
+LINE (350, 65)-(352, 67), 1, BF
+LINE (341, 68)-(343, 70), 1, BF
+LINE (350, 68)-(352, 70), 1, BF
+LINE (362, 50)-(364, 52), 1, BF
+LINE (362, 53)-(364, 55), 1, BF
+LINE (362, 56)-(364, 58), 1, BF
+LINE (362, 59)-(364, 61), 1, BF
+LINE (362, 62)-(364, 64), 1, BF
+LINE (362, 65)-(364, 67), 1, BF
+LINE (362, 68)-(364, 70), 1, BF
+LINE (365, 68)-(367, 70), 1, BF
+LINE (380, 56)-(382, 58), 1, BF
+LINE (383, 56)-(385, 58), 1, BF
+LINE (377, 59)-(379, 61), 1, BF
+LINE (386, 59)-(388, 61), 1, BF
+LINE (377, 62)-(379, 64), 1, BF
+LINE (380, 62)-(382, 64), 1, BF
+LINE (383, 62)-(385, 64), 1, BF
+LINE (377, 65)-(379, 67), 1, BF
+LINE (380, 68)-(382, 70), 1, BF
+LINE (383, 68)-(385, 70), 1, BF
+LINE (395, 59)-(397, 61), 1, BF
+LINE (401, 59)-(403, 61), 1, BF
+LINE (404, 59)-(406, 61), 1, BF
+LINE (395, 62)-(397, 64), 1, BF
+LINE (398, 62)-(400, 64), 1, BF
+LINE (404, 62)-(406, 64), 1, BF
+LINE (395, 65)-(397, 67), 1, BF
+LINE (404, 65)-(406, 67), 1, BF
+LINE (395, 68)-(397, 70), 1, BF
+LINE (404, 68)-(406, 70), 1, BF
+LINE (416, 68)-(418, 70), 1, BF
+LINE (419, 68)-(421, 70), 1, BF
+
+Register 10, 18, 23, 79, ""
+Echo "Die ALT-Taste ist im mausfreien LaOS ebenfalls sehr wichtig."
+Echo ""
+Echo "Mit ihr lassen sich MenÅs anwÑhlen. MenÅs unterscheiden sich farblich zwischen einfachen SchaltflÑchen, die Sie nur mit der TAB-Taste anwÑhlen kînnen. Die MenÅs jedoch wÑhlen Sie mit ALT an."
+Echo ""
+Echo "Sie finden diese Taste im unteren linken Bereich der Tastatur."
+Echo ""
+Echo ">>DrÅcken Sie ALT, um fortzufahren."
+DO: LOOP UNTIL INKEY$ = CHR$(27) OR INP(&H60) = 56
+
+Register 10, 18, 23, 79, ""
+Echo "Oben rechts sehen Sie nun ein MenÅ!"
+Echo ""
+Echo "Mit ALT wÑhlen Sie es an und bewegen dann mit den Pfeiltasten den Fokus zum MenÅpunkt 'Bearbeiten'"
+ClearControls 3
+MenuBox 2, 53, "Datei"
+MenuBox 2, 0, "Bearbeiten"
+MenuBox 2, 0, "Ansicht"
+
+1502
+MenuNow = 1
+GetInp
+MenuNow = 0
+IF Focus <> "Bearbeiten" THEN Dialog "WÑhlen Sie bitte den MenÅpunkt 'Bearbeiten' aus!": GOTO 1502
+TextScale = 18
+TextBreak = 19
+Echo "WÑhlen Sie jetzt mit den Pfeiltasten den Menupunkt 'EinfÅgen' an."
+DO
+a$ = MenuInt("RÅckgÑngig,-,Ausschneiden,Kopieren,EinfÅgen,Lîschen", ",")
+IF Choice <> 5 THEN Dialog "DrÅcken Sie in der MenÅliste die Pfeiltasten, um zum EinfÅgen-Menupunkt zu  gelangen."
+LOOP UNTIL Choice = 5
+
+END SUB
+
+SUB ClearControls (Connect)
+SELECT CASE Connect
+CASE 0: ControlNr = 0: ERASE ControlList
+CASE 1: MenuNr = 0: ERASE MenuList
+CASE 2: SymbolNr = 0: ERASE SymbolList: Symb.left = 0: Symb.top = 0: Symb.total = 0
+CASE 3 'Alle lîschen
+ControlNr = 0: ERASE ControlList
+MenuNr = 0: ERASE MenuList
+SymbolNr = 0: ERASE SymbolList: Symb.left = 0: Symb.top = 0: Symb.total = 0
+END SELECT
+
+END SUB
+
+SUB CLW
+'Fenster:
+LINE (2, 2)-(637, 347), 0, BF
+LINE (0, 0)-(638, 348), Fensterfarbe, B
+'Schatten:
+LINE (1, 1)-(637, 1), Schattenfarbe
+LINE (1, 1)-(1, 347), Schattenfarbe
+'Rand:
+LINE (639, 349)-(0, 349), Randfarbe
+LINE (639, 349)-(639, 0), Randfarbe
+
+TextScale = 2 '=Zeile
+TextBreak = 2 '=Spalte
+EBox.left = 603: EBox.top = 321
+Left = 2: Top = 2: Right = 79: Down = 24
+END SUB
+
+FUNCTION ComboBox$ (Nr, z, s, zu, su)
+
+IF Combo(Nr, 1) = "" THEN Combo(Nr, 1) = " "
+DIM Trenner(1 TO 5)
+
+
+MaxItem% = 30000
+
+IF z = 0 THEN z = Top
+IF s = 0 THEN s = Left
+IF zu = 0 THEN zu = Down
+IF su = 0 THEN su = Right
+
+MaxLenth = su - s + 1
+MaxDown = zu - z + 1
+
+DO
+i = i + 1
+IF Combo(Nr, i) = "-" THEN Combo(Nr, i) = STRING$(MaxLenth, 196): tr = tr + 1: Trenner(tr) = Standort + i
+LOOP UNTIL Combo(Nr, i) = ""
+
+
+a = s * 8 - 11
+B = z * 14 - 17
+c = su * 8 + 1
+d = zu * 14 + 1
+
+
+FrameWindow a, B, c, d, 0
+
+ItemPos = 1
+ItemPage = 1
+
+IF ActivItem <> "" THEN act$ = ActivItem: zrl = 1: GOTO aktivieren
+weiter2:
+
+DO
+
+ Standort = ItemPage * MaxDown - MaxDown + 1
+LOCATE z
+
+ FOR i = 0 TO MaxDown - 1
+  IF Standort + i <= MaxItem% THEN
+  IF LEN(Combo(Nr, (Standort + i))) <= MaxLenth THEN
+  Eintrag$ = Combo(Nr, Standort + i) + SPACE$(MaxLenth - LEN(Combo(Nr, Standort + i)))
+  ELSE
+  Eintrag$ = LEFT$(Combo(Nr, Standort + i), MaxLenth)
+  END IF
+  ELSE Eintrag$ = SPACE$(MaxLenth)
+  END IF
+
+    IF INSTR(Eintrag$, CHR$(0)) > 0 THEN Eintrag$ = LEFT$(Eintrag$, INSTR(Eintrag$, CHR$(0)) - 1)
+
+   IF Standort + i = ItemPos THEN COLOR InfoColor ELSE COLOR Farbe
+
+   LOCATE , s: PRINT Eintrag$
+IF i = 0 THEN LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B ELSE LINE (s * 8 - 9, (z + i) * 14 - 14)-(su * 8, (z + i) * 14), 0, B
+
+ NEXT i
+
+i = ItemPos - Standort
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), InfoFrame, B
+
+SELECT CASE GetKey
+CASE "up"
+ItemPos = ItemPos - 1
+
+FOR i = 1 TO UBOUND(Trenner)
+IF Trenner(i) = ItemPos THEN ItemPos = ItemPos - 1
+NEXT
+IF ItemPos < Standort THEN ItemPage = ItemPage - 1
+
+
+CASE "down"
+IF ItemPos < MaxItem% THEN
+
+IF Combo(Nr, ItemPos + 1) <> "" THEN
+
+ItemPos = ItemPos + 1
+
+FOR i = 1 TO UBOUND(Trenner)
+IF Trenner(i) = ItemPos THEN ItemPos = ItemPos + 1
+NEXT
+
+
+IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+END IF
+END IF
+
+CASE "home"
+    ItemPos = 1
+    ItemPage = 1
+    IF Trenner(1) = 1 THEN ItemPos = ItemPos + 1
+
+CASE "end"
+    DO
+        ItemPos = ItemPos + 1
+        Standort = ItemPage * MaxDown - MaxDown + 1
+        IF ItemPos > Standort + MaxDown THEN ItemPage = ItemPage + 1
+    LOOP UNTIL Combo(Nr, ItemPos) = ""
+        ItemPos = ItemPos - 1
+
+    FOR i = 1 TO UBOUND(Trenner)
+        IF Trenner(i) = ItemPos THEN ItemPos = ItemPos - 1
+    NEXT
+
+CASE "pageup"
+IF ItemPos - MaxDown > 0 THEN
+    ItemPage = ItemPage - 1
+    ItemPos = ItemPos - MaxDown
+END IF
+CASE "pagedown"
+IF ItemPos + MaxDown < MaxItem% + 1 THEN
+IF Combo(Nr, ItemPos + MaxDown) <> "" THEN
+ItemPage = ItemPage + 1
+ItemPos = ItemPos + MaxDown
+END IF
+END IF
+CASE "esc"
+    Choice = 0: ComboBox = "": GOTO ExitBox
+
+CASE CHR$(13), "tab"
+    LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B
+    Choice = ItemPos: ComboBox = Combo(Nr, ItemPos): GOTO ExitBox
+
+CASE ELSE
+IF LEN(keyb) = 1 THEN
+act$ = keyb
+aktivieren:
+
+AltePosition = ItemPos
+AlteSeite = ItemPage
+
+DO
+ ItemPos = ItemPos + 1
+ IF ItemPos = AltePosition THEN ItemPage = AlteSeite: EXIT DO
+ Standort = ItemPage * MaxDown - MaxDown + 1
+ IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+   Eintrag$ = LEFT$(Combo(Nr, ItemPos), MaxLenth)
+   IF Eintrag$ = "" OR ItemPos > MaxItem% - 1 THEN ItemPos = 0: ItemPage = 1
+
+LOOP UNTIL LCASE$(LEFT$(Eintrag$, LEN(act$))) = LCASE$(act$)
+GOTO weiter2
+
+END IF
+
+END SELECT
+
+FOR i = 1 TO UBOUND(Trenner)
+IF Trenner(i) = ItemPos THEN ItemPos = ItemPos + 1
+NEXT
+
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+IF Combo(Nr, ItemPos) = "" THEN ItemPos = ItemPos - 1
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+
+LOOP
+
+ExitBox:
+COLOR Farbe
+END FUNCTION
+
+SUB Control (Zeilen, Spalten, Text$)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak
+IF Zeilen > Down THEN Zeilen = Top: Spalten = NextBreak + 1: TextScale = Top: TextBreak = NextBreak
+
+IF LEN(Text$) + Spalten + 2 > NextBreak THEN NextBreak = LEN(Text$) + Spalten + 2
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + LEN(Text$)
+EndZeile = Zeilen + INT(LEN(Text$) / 80 + 1)
+IF LEN(Text$) = 80 THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+LOCATE Zeilen, Spalten: COLOR Farbe: PRINT Text$
+'LINE (a, B)-(c, d), Farbe, B
+'PAINT (a + 1, B + 1), Controlfarbe, Farbe
+LINE (a, B)-(c, d), Controlfarbe, B
+
+'Schatten: (Wird angezeigt, falls das Control aktiviert ist.
+IF Activ = Text$ THEN
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+'Control eintragen:
+a$ = Zeilen$ + Spalten$ + Text$
+i = 0
+DO: i = i + 1
+IF ControlList(i) = a$ THEN GOTO 2
+LOOP UNTIL ControlList(i) = ""
+ControlList(i) = a$
+ControlNr = 1
+
+
+2 Activ = Text$: ControlConnect = 0: TextScale = Zeilen + 2
+END SUB
+
+SUB DeleteBox (Box$)
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = Box$ THEN
+DO
+plus = plus + 1
+GET 1, i + plus, a$
+PUT 1, i + plus - 1, a$
+LOOP WHILE a$ <> ""
+errorlevel = 0: EXIT SUB
+END IF
+LOOP UNTIL a$ = ""
+
+errorlevel = 1 'Ordner nicht gefunden.
+END SUB
+
+SUB Dialog (Caption$)
+IF LEN(Caption$) < 22 THEN Caption$ = STRING$(INT((22 - LEN(Kennung$)) / 2), " ") + Caption$ + STRING$(CINT((22 - LEN(Kennung$)) / 2 + .1), " ")
+
+IF LEN(Caption$) > 303 THEN Caption$ = LEFT$(Caption$, 300) + "..."
+IF LEN(Caption$) > 76 THEN Length = 76 ELSE Length = LEN(Caption$)
+Spalten = INT(40 - Length / 2 + 1)
+Zeilen = 11 - INT(LEN(Caption$) / 76) + 1
+
+x1! = Spalten * 8 - 11
+y1! = Zeilen * 14 - 17
+EndSpalten = 40 + INT(Length / 2)
+EndZeilen = 14 + INT(LEN(Caption$) / 76)
+IF INT(LEN(Caption$) / 76) > 1 THEN EndZeilen = EndZeilen - (INT(LEN(Caption$) / 76) - 1)
+IF LEN(Caption$) < 76 THEN EndZeilen = EndZeilen + 1
+x2! = EndSpalten * 8 + 4
+y2! = EndZeilen * 14 - 4
+Groesse = 4 + INT(((PMAP(x2!, 0) - PMAP(x1!, 0) + 1) * (1) + 7) / 8) * 2 * (PMAP(y2!, 1) - PMAP(y1!, 1) + 1)
+DIM Background(Groesse) AS INTEGER
+
+
+GET (x1!, y1!)-(x2!, y2!), Background
+
+FrameWindow x1!, y1!, x2! - 1, y2! - 1, 1
+
+ecr = 1
+FOR i = 1 TO INT(LEN(Caption$) / 76) + 1
+LOCATE Zeilen, Spalten
+PRINT MID$(Caption$, ecr, 76)
+ecr = ecr + 76
+Zeilen = Zeilen + 1
+NEXT
+
+TextBox Zeilen + 1, 33, "      OK", 14
+
+DO
+B$ = a$
+a$ = GetKey
+LOOP UNTIL a$ = "esc" OR a$ = CHR$(13)
+IF a$ = "esc" THEN keyb = "esc" ELSE keyb = B$
+PUT (x1!, y1!), Background, PSET: x1! = 0: y1! = 0: EXIT SUB
+
+
+END SUB
+
+FUNCTION DosFile$ (Kennung$, InOrdner$)
+'Gibt die DOS-Datei eines LaOS-Files zurÅck.
+'Beispiel: OPEN DosFile("LaOS Draw","Zubehîr") FOR INPUT AS 1
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF Kennung$ = RTRIM$(OsName$) AND InOrdner$ = RTRIM$(Ordner$) THEN DosFile = RTRIM$(Dateiname$): CLOSE 1: EXIT FUNCTION
+LOOP UNTIL Ltext$(Dateiname$, 1) = ""
+errorlevel = 1
+CLOSE 1
+
+END FUNCTION
+
+FUNCTION Drivelist$ (Nr)
+STATIC LastNr
+IF Nr < 1 THEN Nr = LastNr + 1
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+GET 1, Nr, a$
+IF a$ = "" THEN GET 1, 1, a$: Nr = 1
+
+LastNr = Nr
+Drivelist = LEFT$(a$, 1)
+CLOSE 1
+END FUNCTION
+
+SUB Echo (Txt$)
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF TextScale > Down THEN TextScale = Top
+
+'10.11.1999: Echo mit Zeilenumbruch (C) Urs Langmeier.
+
+Text$ = Txt$ + " "
+
+DIM s AS INTEGER, z AS INTEGER, t AS INTEGER, brk AS INTEGER
+
+
+s = 1
+z = Right - TextBreak + 2'ZeilenlÑnge
+dwn = 0
+
+p1% = s
+p2% = p1%
+DO
+    t = t + 1
+        IF t = p1% THEN p2% = p1%'alten Retten
+        p1% = INSTR(t, Text$, " ")
+        IF p1% = 0 OR p1% = LEN(Text$) THEN
+            IF p1% <= s + z - 1 THEN p2% = LEN(Text$): brk = -1
+        END IF
+
+        IF p1% > s + z - 1 OR brk THEN 'nehme alten, weil neuen Åber die Zeile ragt.
+            'Zeile ausgeben:
+            p1% = p2%
+            IF TextScale + dwn > Down THEN EXIT DO
+                IF p1% - s <= 0 THEN 'falls Wort zu lange (nicht in die Zeile passt:)
+
+                    p1% = s + z - 1
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% - 1
+                    s = t + 1
+
+                ELSE
+
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% + 1
+                    s = t
+                END IF
+
+            'Ausrichtung:
+            SELECT CASE Align%
+                CASE 0: x% = TextBreak
+                CASE 1: x% = TextBreak + FIX((Right - TextBreak - LEN(a$) + 1) / 2)
+                CASE 2: x% = Right - LEN(a$) + 1
+            END SELECT
+
+            LOCATE TextScale + dwn, x%
+            PRINT a$;
+
+            dwn = dwn + 1
+        END IF
+LOOP UNTIL t >= LEN(Text$)
+TextScale = TextScale + dwn
+
+
+END SUB
+
+FUNCTION exist (p$)
+a = FREEFILE
+OPEN p$ FOR BINARY AS a
+IF LOF(a) = 0 THEN CLOSE a: KILL p$: exist = 0 ELSE CLOSE a: exist = -1
+END FUNCTION
+
+SUB ExitBox (x, y)
+IF x = -1 THEN x = EBox.left
+IF y = -1 THEN y = EBox.top
+LINE (x, y)-(x + 26, y + 20), Fensterfarbe, B
+LINE (x + 1, y + 1)-(x + 25, y + 1), Schattenfarbe
+LINE (x + 1, y + 1)-(x + 1, y + 19), Schattenfarbe
+LINE (x, y + 21)-(x + 26, y + 21), Randfarbe
+LINE (x + 27, y + 21)-(x + 27, y), Randfarbe
+
+LINE (x + 2, y + 19)-(x + 24, y + 2), Fensterfarbe
+LINE (x + 3, y + 19)-(x + 25, y + 2), Schattenfarbe
+LINE (x + 2, y + 2)-(x + 24, y + 19), Fensterfarbe
+LINE (x + 3, y + 2)-(x + 25, y + 19), Schattenfarbe
+
+END SUB
+
+FUNCTION FileChoose$ (Art1$)
+'LÑsst den Benutzer eine Datei auswÑhlen. Art1$: Die Art-Spalte. Leer = alle.
+301
+indrive = 0
+SHELL "c:": CHDIR "\laos"
+Register Fe2, Fe1, Fe4, Fe3, DriveName
+ClearControls (2)
+TimeLock 1
+Datics = 0
+
+'Laufwerke laden:
+ON ERROR GOTO fehlernext
+CLOSE 1: OPEN "drvlist.bnk" FOR RANDOM AS 1
+nf = FREEFILE
+lmf = nf + 1
+CLOSE lmf: OPEN "c:\laos\lwmap.tmp" FOR RANDOM AS lmf
+
+i = 0
+DO
+i = i + 1
+errorlevel = 0
+
+GET 1, i, LNam$
+IF LNam$ = "" THEN EXIT DO
+lw$ = LEFT$(LNam$, 1): OPEN lw$ + ":\nul" FOR BINARY AS nf: CLOSE nf
+IF errorlevel = 0 THEN 'Laufwerk vorhanden:
+IF MID$(LNam$, 4) <> DriveName$ THEN
+OPEN lw$ + ":\laos\medname.inf" FOR RANDOM AS nf
+GET nf, 1, B$
+IF B$ = "" THEN B$ = MID$(LNam$, 4)
+errorlevel = 0
+CLOSE nf: OPEN lw$ + ":\laos\drvicon.lsb" FOR BINARY AS nf
+Datics = Datics + 1
+
+PUT lmf, , lw$
+
+IF LOF(nf) = 0 THEN
+LoadSymbol "drvicon", B$
+ELSE
+'Symbol des DatentrÑgers verwenden:
+TimeLock 1
+KILL "~otdric" + lw$ + ".lsb"
+f = FREEFILE
+OPEN "~otdric" + lw$ + ".lsb" FOR BINARY AS f
+DIM g AS SINGLE
+n = 0: DO: n = n + 1: GET nf, n, g: PUT f, n, g: LOOP UNTIL g = 0: CLOSE f
+LoadSymbol "~otdric" + lw$, B$
+END IF
+CLOSE nf
+LNam$ = ""
+B$ = ""
+END IF
+END IF
+LOOP
+CLOSE lmf
+TimeLock 0
+
+
+'Ordner laden:
+304
+CLOSE 1: OPEN "ordner.bnk" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ <> "" THEN LoadSymbol "ordner", a$
+LOOP UNTIL a$ = ""
+
+ShowSymbols
+GetInp
+IF keyb = "esc" AND indrive = 0 THEN EXIT FUNCTION
+IF keyb = "esc" THEN 301
+IF SymbolNr <= Datics THEN 'Laufwerk angewÑhlt:
+f = FREEFILE: OPEN "c:\laos\lwmap.tmp" FOR RANDOM AS f
+GET f, SymbolNr, lw$: CLOSE f
+Switchdrive lw$
+ClearControls (2)
+Register Fe2, Fe1, Fe4, Fe3, DriveName
+indrive = 1
+GOTO 304
+END IF
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS InOrdner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+Register Fe2, Fe1, Fe4, Fe3, Focus
+TimeLock 1
+AlteZeit = TIMER
+ClearControls (2)
+DO
+GET 1
+IF RTRIM$(InOrdner$) = Focus AND RTRIM$(Art$) = Art1$ OR Art1$ = "" AND RTRIM$(InOrdner$) = Focus THEN
+LoadSymbol Ltext(Symbol$, 1), RTRIM$(OsName$)
+END IF
+IF TIMER - AlteZeit > .5 THEN TimeLock (1): AlteZeit = TIMER
+LOOP UNTIL Ltext(Dateiname$, 1) = ""
+
+TimeLock (0)
+ord$ = Focus
+
+ShowSymbols
+GetInp
+IF keyb = "esc" THEN GOTO 301
+
+
+ClearControls 2
+FileChoose = DosFile(Focus, ord$)
+
+END FUNCTION
+
+SUB Frame
+'Frame kann ausgefÅhrt werden, um ein Rahmen um das Fenster zu machen,
+'und dabei aber die Left- Top- usw.-Kordinaten zu behalten.
+'einzig die TextScale- und TextBreak- Koordinaten wechseln nach oben links.
+'-> Siehe auch die Sub "CLW".
+
+FrameWindow 0, 0, 638, 348, 0
+
+'EBox.left = 603: EBox.top = 321
+'Left = 2: Top = 2: Right = 79: Down = 24
+TextScale = 2: TextBreak = 2
+END SUB
+
+SUB FrameWindow (a, B, c, d, del)
+'Erstellt ein Fenster, ohne dabei die Umgebungsvariablen zu verÑndern
+'Wahlweise wird der Inhalt des Fensters gelîscht (del = 1), oder nicht.
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+IF del = 1 THEN LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+END SUB
+
+FUNCTION Gerade (Zahl)
+IF Zahl / 2 - FIX(Zahl / 2) = 0 THEN Gerade = 1:  ELSE Gerade = 0
+END FUNCTION
+
+FUNCTION GetFile$
+'Fragt den Benutzer nach den Dateinamensangaben ab,
+'und erstellt diese Datei. GetFile gibt den DOS-Dateiname zurÅck.
+'Beispiel: OPEN GetFile("sys","Zeichnung") FOR OUTPUT AS 1
+
+
+CLOSE 1: OPEN "\laos\ordner.bnk" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+Combo(1, i) = a$
+LOOP UNTIL a$ = ""
+200
+Register 6, 1, 18, 80, "Datei speichern unter"
+TextBreak = 35
+Echo ""
+Echo "Dateiname:"
+Echo ""
+Echo "Dateiinfo:"
+
+DO
+ExitBox -1, -1
+201
+ActivItem = ord$
+ord$ = ComboBox(1, 8, 0, 0, 33)
+IF keyb = "esc" THEN EXIT FUNCTION
+
+
+202
+nam$ = InputBox(8, 47, nam$, 32, 1)
+IF keyb = "esc" THEN EXIT FUNCTION
+IF keyb = "down" THEN 203
+IF keyb = "left" THEN 201
+
+203
+inf$ = InputBox(10, 47, inf$, 32, 8)
+IF keyb = "esc" THEN EXIT FUNCTION
+IF keyb = "up" THEN 202
+IF keyb = "left" THEN 201
+LOOP UNTIL keyb = CHR$(13)
+
+
+IF on.too = 1 THEN EXIT FUNCTION
+Register 8, 5, 16, 75, "Datei existiert schon"
+Echo ""
+Echo "Dieser Dateiname existiert schon im angewÑhlten Ordner."
+Echo "Soll diese Datei Åberschrieben werden, oder soll eine neue erstellt  werden?"
+ClearControls 0
+Control 14, 20, "     Neue Datei     "
+Control 14, 42, "   öberschreiben   "
+GetInp
+on.too = 1
+IF Focus = "   öberschreiben   " THEN EXIT FUNCTION
+IF Focus = "     Neue Datei     " THEN LOCATE 20, 3: PRINT "Jetzt mÅssen Sie den Dateinamen Ñndern.": GOTO 200
+
+END FUNCTION
+
+SUB GetInp
+DIM kbd AS STRING
+'Aktiviere das Control mit dem Fokus:
+SELECT CASE ControlConnect
+CASE 0: Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+CASE 2: Activate SymbolList(SymbolNr)
+END SELECT
+
+
+DO
+IF MenuNow = 1 THEN
+    IF Activ = MenuList(2) THEN LOCATE 16, 19: PRINT "DrÅcken Sie jetzt die Eingabetaste, um das Menu anzuwÑhlen." ELSE LOCATE 16, 19: PRINT SPACE$(59)
+END IF
+FOR i = 15 TO 19: KEY(i) ON: NEXT i
+IF InfoTime > 0 THEN
+TIMER ON
+ON TIMER(InfoTime) GOSUB TimeEreignis
+END IF
+  FOR i = 1 TO 4
+    AlteZeit(i) = TIMER
+  NEXT i
+WHILE INKEY$ = CHR$(13) OR INKEY$ = CHR$(27): WEND
+kbd = ""
+ WHILE kbd = ""
+  kbd = INKEY$
+   FOR i = 1 TO 4
+     IF Stoppuhr(i) > 0 THEN
+       IF TIMER - AlteZeit(i) > Stoppuhr(i) THEN StoppUhrBeep (i): AlteZeit(i) = TIMER
+     END IF
+   NEXT i
+ WEND
+TIMER OFF: FOR i = 15 TO 19: KEY(i) OFF: NEXT i
+
+SELECT CASE kbd
+CASE CHR$(13)
+SELECT CASE ControlConnect
+CASE 0: Focus = MID$(ControlList(ControlNr), 5)
+CASE 1: Focus = MID$(MenuList(MenuNr), 5)
+CASE 2: Focus = MID$(SymbolList(SymbolNr), 15)
+END SELECT
+keyb = kbd
+EXIT SUB
+CASE CHR$(9) 'Tab
+STATIC ch AS INTEGER
+
+Activate CHR$(0) 'Aktiviere ein Control, das gar nicht existiert, um alle
+                 'anderen zu deaktivieren.
+ControlConnect = ControlConnect + 1
+IF ControlConnect > 2 THEN ControlConnect = 0
+FOR i = 1 TO 3
+SELECT CASE ControlConnect
+CASE 0: IF ControlList(1) = "" THEN ControlConnect = 1
+CASE 1: IF Change(ch + 1) <> 0 THEN ControlConnect = 0: EXIT FOR
+        IF MenuList(1) = "" THEN ControlConnect = 2
+CASE 2: IF SymbolList(1) = "" THEN ControlConnect = 0
+END SELECT
+NEXT i
+SELECT CASE ControlConnect
+CASE 0
+ch = ch + 1
+IF Change(ch) = 0 THEN ch = 0
+IF ch <> 0 THEN ControlNr = Change(ch)
+Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+CASE 2: Activate SymbolList(SymbolNr)
+END SELECT
+IF TabNow THEN
+    SELECT CASE ControlConnect
+        CASE 0: PLAY "t200L4g"
+        CASE 1: PLAY "t200L4c"
+        CASE 2: PLAY "t200L4e"
+    END SELECT
+END IF
+
+
+CASE CHR$(0) + "H", CHR$(0) + "K": LastControl
+CASE CHR$(0) + "P", CHR$(0) + "M": NextControl
+CASE CHR$(27)
+keyb = "esc": EXIT SUB'Minimize
+END SELECT
+LOOP
+
+END SUB
+
+FUNCTION GetKey$
+
+WHILE INKEY$ <> "": WEND
+
+a$ = "": WHILE a$ = "": a$ = INKEY$: WEND
+
+SELECT CASE MID$(a$, 2)
+CASE "H": a$ = "up"
+CASE "P": a$ = "down"
+CASE "K": a$ = "left"
+CASE "M": a$ = "right"
+CASE "R": a$ = "insert"
+CASE "S": a$ = "delete"
+CASE "G": a$ = "home"
+CASE "O": a$ = "end"
+CASE "I": a$ = "pageup"
+CASE "Q": a$ = "pagedown"
+END SELECT
+
+SELECT CASE ASC(a$)
+CASE 27: a$ = "esc"
+CASE 9: a$ = "tab"
+END SELECT
+
+GetKey = a$
+keyb = a$
+END FUNCTION
+
+SUB GraphicView (a, B, c, d)
+'Diese Sub Ñndert die Umgebungsvariablen (Left, Top, usw.) fÅr einen bestimmt-
+'en Fenster-Bereich. Die darauffolgenden Grafikausgaben erfolgen in diesem
+'Bereich.
+'LINE (a, B)-(c, d), Randfarbe, B
+
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+TextBreak = Left
+TextScale = Top
+END SUB
+
+FUNCTION InputBox$ (Zeilen, Spalten, Text$, Break, MaxDown)
+SHARED Now1
+'Break=Zeilenumbruch | MaxDown=Maximale Zeilen
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Break = 0 OR Break > Right - Spalten THEN Break = Right - Spalten
+IF MaxDown = 0 THEN MaxDown = 24 - Zeilen
+TotalBreak = Break
+Texta$ = Text$: a$ = ""
+GOTO Deletefirst
+
+lesen:
+a$ = GetKey
+
+IF Now1 = 1 AND LCASE$(a$) = "n" THEN LOCATE 20, 4: PRINT "Schreiben Sie 'Ja' hinein, dies ist nur eine Demonstration!"
+IF a$ = CHR$(13) THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "up" OR a$ = "down" OR a$ = "left" OR a$ = "right" OR a$ = "tab" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "esc" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = CHR$(8) THEN
+IF LEN(Texta$) > 0 THEN Texta$ = LEFT$(Texta$, LEN(Texta$) - 1)
+LINE (a, B)-(c + 1, d + 1), 0, BF
+a$ = ""
+END IF
+IF dwn > MaxDown THEN a$ = "": nocur = 1
+
+IF LEN(a$) = 1 THEN Texta$ = Texta$ + a$
+Break = LEN(Texta$) + 1
+
+Deletefirst:
+Break = LEN(Texta$) + 1
+dwn = INT(LEN(Texta$) / TotalBreak) + 1
+IF Break > TotalBreak THEN Break = TotalBreak: nocur = 1
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Texta$) / Break + 1)
+IF dwn > MaxDown AND MaxDown > 1 THEN EndZeile = EndZeile - 1
+IF Break = LEN(Texta$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+
+ecr = TotalBreak * -1 + 1
+FOR i = 1 TO INT(LEN(Texta$) / TotalBreak) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + TotalBreak
+PRINT MID$(Texta$, ecr, TotalBreak);
+NEXT i
+ecr = 0
+
+IF nocur = 0 THEN LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14), InfoColor ELSE nocur = 0
+GOTO lesen
+
+delcur:
+LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14), 0
+
+END FUNCTION
+
+FUNCTION IsEmptyBox (Ordner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS InOrdner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+TimeLock (1)
+AlteZeit = TIMER
+DO
+GET 1
+IF RTRIM$(InOrdner$) = Ordner$ THEN IsEmptyBox = 0: TimeLock (0): EXIT FUNCTION
+
+IF TIMER - AlteZeit > .5 THEN TimeLock (1): AlteZeit = TIMER
+LOOP UNTIL Ltext(Dateiname$, 1) = ""
+TimeLock (0)
+
+IsEmptyBox = 1'Box ist leer
+END FUNCTION
+
+FUNCTION IsExist (Datei$, InOrdner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF Datei$ = RTRIM$(OsName$) AND InOrdner$ = RTRIM$(Ordner$) THEN IsExist = 1: EXIT FUNCTION
+IF Datei$ = RTRIM$(OsName$) AND InOrdner$ = "" THEN IsExist = 1: EXIT FUNCTION
+LOOP UNTIL Ltext$(Dateiname$, 1) = ""
+
+IsExist = 0
+
+
+END FUNCTION
+
+FUNCTION IsExistBox (Box$)
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = Box$ THEN IsExistBox = 1: EXIT FUNCTION
+LOOP UNTIL a$ = ""
+
+IsExistBox = 0
+END FUNCTION
+
+SUB LastControl
+SELECT CASE ControlConnect
+CASE 0
+ControlNr = ControlNr - 1
+IF ControlNr < 1 THEN ControlNr = 1
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1
+MenuNr = MenuNr - 1
+IF MenuNr < 1 THEN MenuNr = 1
+Activate MenuList(MenuNr)
+CASE 2
+Symb.pnr = Symb.pnr - 1
+SymbolNr = SymbolNr - 1
+IF SymbolNr < 1 THEN SymbolNr = 1: Symb.pnr = 1
+IF Symb.pnr < 1 THEN
+DimNow = 1
+SymbolNr.old = SymbolNr
+SymbolNr = SymbolNr - Symb.count
+IF SymbolNr.old + Symb.count >= Symb.total THEN SymbolNr = SymbolNr - Symb.ipp + Symb.count
+IF SymbolNr < 0 THEN SymbolNr = 0
+LINE (Left * 8 - 8, Top * 14 - 14)-(Right * 8, Down * 14), 0, BF
+ShowSymbols
+SymbolNr = SymbolNr.old
+Symb.pnr = Symb.count
+END IF
+Activate SymbolList(SymbolNr)
+END SELECT
+END SUB
+
+FUNCTION LinkIt$
+CLOSE 1: OPEN "c:\laos\linkway.tmp" FOR RANDOM AS 1
+GET 1, 1, a$
+LinkIt = a$
+CLOSE 1
+END FUNCTION
+
+SUB LoadPicture (PNr, Bild$, InOrdner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF RTRIM$(OsName$) = Bild$ AND RTRIM$(Ordner$) = InOrdner$ THEN EXIT DO
+LOOP UNTIL RTRIM$(Dateiname$) = ""
+IF RTRIM$(Dateiname$) = "" THEN errorlevel = 1: EXIT SUB
+
+Pictures(PNr) = Dateiname$
+errorlevel = 0
+END SUB
+
+SUB LoadProgram (Ordner$, Programm$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS InOrdner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+AlteZeit = TIMER
+ds = 0
+DO
+ds = ds + 1
+GET 1, ds
+IF RTRIM$(InOrdner$) = Ordner$ AND RTRIM$(OsName$) = Programm$ THEN EXIT DO
+IF Ltext$(Dateiname$, 1) = "" THEN Dialog "Es wurde versucht, ein Programm zu laden, das nicht existiert.": errorlevel = 1: EXIT SUB
+IF TIMER - AlteZeit > .5 THEN TimeLock (1): AlteZeit = TIMER
+LOOP
+
+TimeLock (0)
+
+SHARED Program AS STRING
+Program = Dateiname$
+
+CLOSE 1
+errorlevel = 0
+END SUB
+
+SUB LoadSymbol (name$, Kennung$)
+Symb.total = Symb.total + 1
+
+'IF LEN(Kennung$) < 4 THEN Kennung$ = STRING$(INT((4 - LEN(Kennung$)) / 2), " ") + Kennung$ + STRING$(CINT((4 - LEN(Kennung$)) / 2 + .1), " ")
+IF LEN(Kennung$) < 4 THEN Kennung$ = Kennung$ + SPACE$(4 - LEN(Kennung$))
+
+
+IF Symb.left = 0 THEN Symb.left = Left
+IF Symb.top = 0 THEN Symb.top = Top
+
+x = (Symb.left - 2 + LEN(Kennung$) / 2) * 8
+y = Symb.top * 14
+
+IF x > Right * 8 - 41 THEN x = (Left - 2 + LEN(Kennung$) / 2) * 8: Symb.left = Left: Symb.top = Symb.top + 4 + IconVerticalSpace: y = Symb.top * 14
+'IF y > Down * 14 - 68 THEN y = Top * 14
+
+Symb.left = (INT(x / 8)) + 4 - CINT(LEN(Kennung$) / 2) + LEN(Kennung$)
+
+'Symbol eintragen:
+
+x$ = MID$(STR$(x), 2)
+IF LEN(x$) < 3 THEN x$ = STRING$(3 - LEN(x$), "0") + x$
+
+y$ = MID$(STR$(y), 2)
+IF LEN(y$) < 3 THEN y$ = STRING$(3 - LEN(y$), "0") + y$
+
+IF LEN(name$) < 8 THEN name$ = name$ + STRING$(8 - LEN(name$), " ")
+
+a$ = x$ + y$ + name$ + RTRIM$(Kennung$)
+
+i = 0
+DO: i = i + 1: LOOP UNTIL SymbolList(i) = ""
+SymbolList(i) = a$
+SymbolNr = 0
+END SUB
+
+FUNCTION Ltext$ (Text$, ab) 'ab bedeutet: AB diesem Zeichen wird gemessen
+IF ab = 0 THEN ab = 1
+FOR i = ab TO LEN(Text$) - ab + 1
+IF MID$(Text$, i, 1) = " " OR ASC(MID$(Text$, i, 1)) = 0 THEN EXIT FOR
+NEXT i
+Ltext$ = MID$(Text$, ab, i - ab)
+END FUNCTION
+
+SUB MakeWindow (a, B, c, d)
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+
+END SUB
+
+SUB Menuact (Menu$)
+Zeilen = VAL(LEFT$(Menu$, 2))
+Spalten = VAL(MID$(Menu$, 3, 2))
+Caption$ = MID$(Menu$, 5)
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17
+c = (Spalten + LEN(Caption$)) * 8 - 5: d = (Zeilen + 1) * 14 - 11
+
+
+IF Activ = Menu$ THEN
+LOCATE Zeilen, Spalten: PRINT Caption$
+Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+END SUB
+
+SUB MenuBox (Zeilen, Spalten, Caption$)
+STATIC NMZeilen AS INTEGER, NMSpalten AS INTEGER
+IF NMZeilen = 0 THEN NMZeilen = Top
+IF NMSpalten = 0 THEN NMSpalten = Left
+IF Zeilen = 0 THEN Zeilen = NMZeilen
+IF Spalten = 0 THEN Spalten = NMSpalten
+
+IF Spalten + LEN(Caption$) - 1 > Right THEN Spalten = Left: Zeilen = Zeilen + 2
+IF Zeilen > Down THEN Zeilen = Top: Spalten = Left
+
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17: c = (Spalten + LEN(Caption$)) * 8 - 5
+d = (Zeilen + 1) * 14 - 11
+
+'Lîschen:
+LINE (a, B)-(c, d), 0, BF
+LOCATE Zeilen, Spalten: PRINT Caption$
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+'LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+'LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+
+NMSpalten = Spalten + LEN(Caption$) + 2
+NMZeilen = Zeilen
+IF NMSpalten > Right THEN NMSpalten = Left: NMZeilen = Zeilen + 2
+IF NMZeilen > Down THEN NMZeilen = Top: NMSpalten = Left
+
+'Menu eintragen:
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+a$ = Zeilen$ + Spalten$ + Caption$
+i = 0
+DO: i = i + 1
+IF MenuList(i) = a$ THEN EXIT SUB
+LOOP UNTIL MenuList(i) = ""
+MenuList(i) = a$
+MenuNr = 1
+
+
+TextScale = Zeilen + 2
+END SUB
+
+FUNCTION MenuInt$ (Item$, Trennzeichen$)
+ON ERROR GOTO 0
+Item$ = Item$ + Trennzeichen$
+
+MaxLenth = 1
+FOR i = 1 TO UBOUND(Combo, 2)
+    IF Combo(1, i) <> "" THEN Combo(1, i) = "" ELSE EXIT FOR
+NEXT
+
+i = 0
+
+DO
+i = i + 1
+
+a$ = Trim(Item$, Trennzeichen$, i)
+
+IF LEN(a$) > 77 THEN a$ = LEFT$(a$, 77)
+IF LEN(a$) > MaxLenth THEN MaxLenth = LEN(a$)
+
+IF a$ <> "" THEN Combo(1, i) = a$
+
+
+LOOP WHILE a$ <> ""
+
+Zeilen = VAL(LEFT$(MenuList(MenuNr), 2)) + 1
+Spalten = VAL(MID$(MenuList(MenuNr), 3, 2))
+IF Spalten + MaxLenth > 79 THEN Spalten = 79 - MaxLenth
+IF Zeilen + i - 1 > 25 THEN Zeilen = 25 - i + 1
+PCOPY 0, 1
+
+a$ = ComboBox(1, Zeilen, Spalten, Zeilen + i - 2, Spalten + MaxLenth)
+
+
+DO
+
+SELECT CASE keyb
+CASE CHR$(13): MenuInt$ = a$: EXIT DO
+CASE "esc", "tab": MenuInt$ = "": Choice = 0: keyb = "esc": EXIT DO
+END SELECT
+LOOP
+
+PCOPY 1, 0
+Activate CHR$(0)
+
+END FUNCTION
+
+SUB NewBox (name$) 'Richtet einen neuen Ordner ein.
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = name$ THEN BEEP: Dialog "Es wurde versucht, einen Ordner zu erstellen, welcher schon existiert.": errorlevel = 1: EXIT SUB
+LOOP UNTIL a$ = ""
+
+PUT 1, i, name$
+errorlevel = 0
+
+END SUB
+
+SUB NextControl
+SELECT CASE ControlConnect
+CASE 0
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE ControlList(tC) <> ""
+tC = tC - 1
+
+ControlNr = ControlNr + 1
+IF ControlNr > tC THEN ControlNr = tC
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1
+tC = 0: DO: tC = tC + 1: LOOP WHILE MenuList(tC) <> ""
+MenuNr = MenuNr + 1
+IF MenuNr > tC - 1 THEN MenuNr = tC - 1
+Activate MenuList(MenuNr)
+CASE 2
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE SymbolList(tC) <> ""
+SymbolNr = SymbolNr + 1: Symb.pnr = Symb.pnr + 1
+
+IF SymbolNr > tC - 1 THEN
+SymbolNr = tC - 1: Symb.pnr = Symb.pnr - 1
+ELSE
+IF Symb.pnr > Symb.count THEN
+DimNow = 1
+SymbolNr = SymbolNr - 1: Symb.pnr = Symb.pnr - 1
+LINE (Left * 8 - 8, Top * 14 - 14)-(Right * 8, Down * 14), 0, BF
+ShowSymbols
+END IF
+END IF
+Activate SymbolList(SymbolNr)
+END SELECT
+END SUB
+
+SUB Register (z, s, zu, su, Text$)
+IF z = 0 THEN z = 1
+IF s = 0 THEN s = 1
+IF zu = 0 THEN zu = 25
+IF su = 0 THEN su = 80
+IF s + LEN(Text$) > su - 1 AND su - s > 2 THEN Text$ = LEFT$(Text$, su - s - 3) + ".."
+a = s * 8 - 4
+B = z * 14 - 9
+c = su * 8 - 7
+d = zu * 14 - 7
+'Fenster:
+LINE (a, B - 4)-(c, d), 0, BF
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+LOCATE INT(B / 14) + 1, TextBreak
+PRINT Text$
+Break = su - 1
+IF z = 1 THEN LINE (0, 0)-(638, 0), Fensterfarbe: LINE (1, 1)-(637, 1), 0: LINE (1, 1)-(1, 347), 0
+EBox.left = c - 31: EBox.top = d - 24
+Left = s + 1: Top = z + 1: Right = su - 1: Down = zu - 1
+END SUB
+
+FUNCTION SDate$ 'Function fÅr das System-Datum
+SELECT CASE Datumsformat
+CASE 0'TT.MM.JJJJ
+SDate$ = MID$(DATE$, 4, 2) + "." + LEFT$(DATE$, 2) + "." + RIGHT$(DATE$, 4)
+CASE 1'MM-TT-JJJJ
+SDate$ = DATE$
+CASE 2'JJJJ/MM/TT
+SDate$ = RIGHT$(DATE$, 4) + "/" + LEFT$(DATE$, 2) + "/" + MID$(DATE$, 4, 2)
+END SELECT
+END FUNCTION
+
+SUB ShowPicture (PNr, Streck)
+
+Bild$ = Pictures(PNr)
+IF Streck = 0 THEN Streck = 1
+
+DIM Befehle(2500, 5) AS SINGLE
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+
+CLOSE 1: OPEN Bild$ FOR BINARY AS 1
+
+i = 0
+DO
+i = i + 1
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+LOOP WHILE Befehle(i, 0) <> 0
+i = 0
+DO
+i = i + 1
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3)
+CASE "m": PAINT (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4)
+CASE "l": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), B
+CASE "b": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), BF
+CASE "k": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), , , Befehle(i, 5)
+CASE "x": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), Befehle(i + 1, 1), Befehle(i + 1, 2), Befehle(i, 5)
+          i = i + 1
+END SELECT
+LOOP WHILE Befehle(i, 0) <> 0
+i = 0
+
+END SUB
+
+SUB ShowSymbols
+Symb.count = 0
+Symbol = SymbolNr
+DIM Befehle(2500, 5) AS SINGLE
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+DIM LastSymbol AS STRING
+
+
+IF Symbol = 0 THEN DimY = 0
+
+DO
+Symbol = Symbol + 1
+Symb.count = Symb.count + 1
+
+a$ = SymbolList(Symbol)
+IF a$ = "" THEN EXIT DO
+
+name$ = MID$(a$, 7, 8)
+Kennung$ = MID$(a$, 15)
+IF LEN(Kennung$) < 4 THEN Kennung$ = STRING$(INT((4 - LEN(Kennung$)) / 2), " ") + Kennung$ + STRING$(CINT((4 - LEN(Kennung$)) / 2 + .1), " ")
+
+x = VAL(LEFT$(a$, 3))
+y = VAL(MID$(a$, 4, 3))
+IF DimNow = 1 THEN DimY = y - Top * 14: DimNow = 0
+y = y - DimY
+IF y > Down * 14 - 64 THEN DimNow = 1: EXIT DO'DimY = DimY + y - Top * 14: EXIT DO
+
+VIEW (x, y)-(x + 40, y + 40), SymbolColor, SymbolFrame
+Spalten = (INT(x / 8)) + 4 - CINT(LEN(Kennung$) / 2)
+IF Spalten <= 1 THEN Spalten = 2
+IF Spalten + LEN(Kennung$) > Right THEN Spalten = Right - LEN(Kennung$)
+IF Spalten <= Left THEN Kennung$ = LEFT$(Kennung$, LEN(Kennung$) - ((Left - Spalten) + 1)): Spalten = Left + 1
+LOCATE INT((y + 40) / 14) + 2, Spalten: PRINT Kennung$
+Symb.left = Spalten + LEN(Kennung$)
+
+IF LastSymbol <> name$ THEN
+CLOSE 1: OPEN name$ + ".lsb" FOR BINARY AS 1: GET 1, 1, TA 'Testen, ob Symb-
+IF TA = 0 THEN name$ = "c:\laos\" + name$                'ol vorhanden.
+CLOSE 1: OPEN name$ + ".lsb" FOR BINARY AS 1: GET 1, 1, TA
+IF TA = 0 THEN name$ = "c:\laos\sys"
+
+CLOSE 1: OPEN name$ + ".lsb" FOR BINARY AS 1
+
+i = 0
+DO
+i = i + 1
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+LOOP WHILE Befehle(i, 0) <> 0
+END IF
+LastSymbol = name$
+
+i = 0
+DO
+i = i + 1
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3)
+CASE "m": PAINT (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4)
+CASE "l": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), B
+CASE "b": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), BF
+CASE "k": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), , , Befehle(i, 5)
+CASE "x": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), Befehle(i + 1, 1), Befehle(i + 1, 2), Befehle(i, 5)
+          i = i + 1
+END SELECT
+LOOP WHILE Befehle(i, 0) <> 0
+i = 0
+VIEW 'Setzt das Darstellungsfeld wieder auf den ganzen Bildschirm.
+LOOP
+IF a$ <> "" THEN Symb.ipp = Symb.count - 1
+Symb.total = Symbol - 1
+Symb.count = Symb.count - 1
+
+ControlConnect = 2 'Setzt den Verweis auf das Symbol-Steuerelement
+SymbolNr = Symb.total - Symb.count + 1
+Symb.pnr = 1
+END SUB
+
+SUB StoppUhrBeep (Uhr)
+SELECT CASE Uhr
+CASE 1: TimeLock (1)
+CASE 2: SCREEN , , , 1: COLOR , 0
+a$ = "": DO: a$ = INKEY$: LOOP WHILE a$ = ""
+SCREEN , , , 0: COLOR Farbe, Hintergrundfarbe
+END SELECT
+END SUB
+
+SUB Switchdrive (lw$)
+IF lw$ = "c" THEN SHELL "c:": CHDIR "\laos": EXIT SUB
+
+ON ERROR GOTO fehlernext
+errorlevel = 0
+SHELL lw$ + ":"
+CHDIR "\laos"
+
+IF errorlevel = 0 THEN
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+   
+    i = 0
+    DO
+        i = i + 1
+        GET 1, i, a$
+    LOOP UNTIL LEFT$(a$, 1) = lw$ OR a$ = ""
+
+CLOSE 1: OPEN lw$ + ":\laos\medname.inf" FOR RANDOM AS 1
+GET 1, 1, DriveName
+IF DriveName = "" THEN DriveName = MID$(a$, 4)
+
+END IF
+
+END SUB
+
+SUB Symbact (Symbol$) 'Aktiviert ein Symbol
+x = VAL(MID$(Symbol$, 1, 3))
+y = VAL(MID$(Symbol$, 4, 3))
+IF DimNow = 1 THEN DimY = DimY + (y - Top * 14): DimNow = 0
+y = y - DimY
+
+IF Activ = Symbol$ THEN
+LINE (x - 2, y - 2)-(x + 42, y + 42), Symbolactiv, B, SymbactStil
+ELSE
+IF y >= Top * 14 AND y < Down * 14 - 64 THEN LINE (x - 2, y - 2)-(x + 42, y + 42), 0, B, SymbactStil
+END IF
+END SUB
+
+SUB TabTaste
+LINE (20, 115)-(120, 155), 1, B
+LINE (120, 115)-(132, 107), 1
+LINE (132, 107)-(132, 167), 1
+LINE (132, 167)-(120, 155), 1
+LINE (132, 167)-(12, 167), 1
+LINE (12, 167)-(20, 155), 1
+LINE (12, 167)-(12, 107), 1
+LINE (12, 107)-(20, 115), 1
+LINE (12, 107)-(132, 107), 1
+PAINT (126, 134), 8, 1
+PAINT (72, 161), 8, 1
+LINE (28, 123)-(28, 131), 1
+LINE (28, 127)-(32, 123), 1
+LINE (28, 127)-(32, 131), 1
+LINE (32, 131)-(32, 123), 1
+LINE (40, 135)-(44, 139), 1
+LINE (44, 139)-(40, 143), 1
+LINE (44, 135)-(44, 143), 1
+LINE (40, 135)-(40, 143), 1
+LINE (32, 127)-(44, 127), 1
+LINE (40, 139)-(28, 139), 1
+PAINT (30.5, 126.75), 1, 1
+PAINT (41.75, 139), 1, 1
+LINE (71, 20)-(73, 22), 1, BF
+LINE (74, 20)-(76, 22), 1, BF
+LINE (77, 20)-(79, 22), 1, BF
+LINE (80, 20)-(82, 22), 1, BF
+LINE (83, 20)-(85, 22), 1, BF
+LINE (71, 23)-(73, 25), 1, BF
+LINE (71, 26)-(73, 28), 1, BF
+LINE (71, 29)-(73, 31), 1, BF
+LINE (74, 29)-(76, 31), 1, BF
+LINE (77, 29)-(79, 31), 1, BF
+LINE (80, 29)-(82, 31), 1, BF
+LINE (71, 32)-(73, 34), 1, BF
+LINE (71, 35)-(73, 37), 1, BF
+LINE (71, 38)-(73, 40), 1, BF
+LINE (74, 38)-(76, 40), 1, BF
+LINE (77, 38)-(79, 40), 1, BF
+LINE (80, 38)-(82, 40), 1, BF
+LINE (83, 38)-(85, 40), 1, BF
+LINE (95, 20)-(97, 22), 1, BF
+LINE (95, 29)-(97, 31), 1, BF
+LINE (95, 32)-(97, 34), 1, BF
+LINE (95, 35)-(97, 37), 1, BF
+LINE (95, 38)-(97, 40), 1, BF
+LINE (107, 29)-(109, 31), 1, BF
+LINE (113, 29)-(115, 31), 1, BF
+LINE (116, 29)-(118, 31), 1, BF
+LINE (107, 32)-(109, 34), 1, BF
+LINE (110, 32)-(112, 34), 1, BF
+LINE (116, 32)-(118, 34), 1, BF
+LINE (107, 35)-(109, 37), 1, BF
+LINE (116, 35)-(118, 37), 1, BF
+LINE (107, 38)-(109, 40), 1, BF
+LINE (116, 38)-(118, 40), 1, BF
+LINE (128, 26)-(130, 28), 1, BF
+LINE (131, 26)-(133, 28), 1, BF
+LINE (125, 29)-(127, 31), 1, BF
+LINE (134, 29)-(136, 31), 1, BF
+LINE (125, 32)-(127, 34), 1, BF
+LINE (128, 32)-(130, 34), 1, BF
+LINE (131, 32)-(133, 34), 1, BF
+LINE (125, 35)-(127, 37), 1, BF
+LINE (128, 38)-(130, 40), 1, BF
+LINE (131, 38)-(133, 40), 1, BF
+LINE (161, 29)-(163, 31), 1, BF
+LINE (173, 29)-(175, 31), 1, BF
+LINE (161, 32)-(163, 34), 1, BF
+LINE (167, 32)-(169, 34), 1, BF
+LINE (173, 32)-(175, 34), 1, BF
+LINE (161, 35)-(163, 37), 1, BF
+LINE (167, 35)-(169, 37), 1, BF
+LINE (173, 35)-(175, 37), 1, BF
+LINE (164, 38)-(166, 40), 1, BF
+LINE (170, 38)-(172, 40), 1, BF
+LINE (185, 20)-(187, 22), 1, BF
+LINE (185, 29)-(187, 31), 1, BF
+LINE (185, 32)-(187, 34), 1, BF
+LINE (185, 35)-(187, 37), 1, BF
+LINE (185, 38)-(187, 40), 1, BF
+LINE (203, 29)-(205, 31), 1, BF
+LINE (206, 29)-(208, 31), 1, BF
+LINE (200, 32)-(202, 34), 1, BF
+LINE (200, 35)-(202, 37), 1, BF
+LINE (203, 38)-(205, 40), 1, BF
+LINE (206, 38)-(208, 40), 1, BF
+LINE (215, 20)-(217, 22), 1, BF
+LINE (215, 23)-(217, 25), 1, BF
+LINE (215, 26)-(217, 28), 1, BF
+LINE (215, 29)-(217, 31), 1, BF
+LINE (221, 29)-(223, 31), 1, BF
+LINE (224, 29)-(226, 31), 1, BF
+LINE (215, 32)-(217, 34), 1, BF
+LINE (218, 32)-(220, 34), 1, BF
+LINE (224, 32)-(226, 34), 1, BF
+LINE (215, 35)-(217, 37), 1, BF
+LINE (224, 35)-(226, 37), 1, BF
+LINE (215, 38)-(217, 40), 1, BF
+LINE (224, 38)-(226, 40), 1, BF
+LINE (239, 23)-(241, 25), 1, BF
+LINE (239, 26)-(241, 28), 1, BF
+LINE (236, 29)-(238, 31), 1, BF
+LINE (239, 29)-(241, 31), 1, BF
+LINE (242, 29)-(244, 31), 1, BF
+LINE (239, 32)-(241, 34), 1, BF
+LINE (239, 35)-(241, 37), 1, BF
+LINE (239, 38)-(241, 40), 1, BF
+LINE (242, 38)-(244, 40), 1, BF
+LINE (257, 20)-(259, 22), 1, BF
+LINE (257, 29)-(259, 31), 1, BF
+LINE (257, 32)-(259, 34), 1, BF
+LINE (257, 35)-(259, 37), 1, BF
+LINE (257, 38)-(259, 40), 1, BF
+LINE (272, 26)-(274, 28), 1, BF
+LINE (275, 26)-(277, 28), 1, BF
+LINE (269, 29)-(271, 31), 1, BF
+LINE (278, 29)-(280, 31), 1, BF
+LINE (272, 32)-(274, 34), 1, BF
+LINE (275, 32)-(277, 34), 1, BF
+LINE (278, 32)-(280, 34), 1, BF
+LINE (278, 35)-(280, 37), 1, BF
+LINE (272, 38)-(274, 40), 1, BF
+LINE (275, 38)-(277, 40), 1, BF
+LINE (278, 38)-(280, 40), 1, BF
+LINE (290, 26)-(292, 28), 1, BF
+LINE (293, 26)-(295, 28), 1, BF
+LINE (287, 29)-(289, 31), 1, BF
+LINE (296, 29)-(298, 31), 1, BF
+LINE (287, 32)-(289, 34), 1, BF
+LINE (290, 32)-(292, 34), 1, BF
+LINE (293, 32)-(295, 34), 1, BF
+LINE (287, 35)-(289, 37), 1, BF
+LINE (290, 38)-(292, 40), 1, BF
+LINE (293, 38)-(295, 40), 1, BF
+LINE (323, 20)-(325, 22), 1, BF
+LINE (326, 20)-(328, 22), 1, BF
+LINE (329, 20)-(331, 22), 1, BF
+LINE (332, 20)-(334, 22), 1, BF
+LINE (335, 20)-(337, 22), 1, BF
+LINE (329, 23)-(331, 25), 1, BF
+LINE (329, 26)-(331, 28), 1, BF
+LINE (329, 29)-(331, 31), 1, BF
+LINE (329, 32)-(331, 34), 1, BF
+LINE (329, 35)-(331, 37), 1, BF
+LINE (329, 38)-(331, 40), 1, BF
+LINE (344, 23)-(346, 25), 1, BF
+LINE (347, 23)-(349, 25), 1, BF
+LINE (341, 26)-(343, 28), 1, BF
+LINE (350, 26)-(352, 28), 1, BF
+LINE (350, 29)-(352, 31), 1, BF
+LINE (344, 32)-(346, 34), 1, BF
+LINE (347, 32)-(349, 34), 1, BF
+LINE (350, 32)-(352, 34), 1, BF
+LINE (341, 35)-(343, 37), 1, BF
+LINE (350, 35)-(352, 37), 1, BF
+LINE (344, 38)-(346, 40), 1, BF
+LINE (347, 38)-(349, 40), 1, BF
+LINE (353, 38)-(355, 40), 1, BF
+LINE (362, 26)-(364, 28), 1, BF
+LINE (365, 26)-(367, 28), 1, BF
+LINE (368, 26)-(370, 28), 1, BF
+LINE (362, 29)-(364, 31), 1, BF
+LINE (362, 32)-(364, 34), 1, BF
+LINE (365, 32)-(367, 34), 1, BF
+LINE (368, 32)-(370, 34), 1, BF
+LINE (368, 35)-(370, 37), 1, BF
+LINE (362, 38)-(364, 40), 1, BF
+LINE (365, 38)-(367, 40), 1, BF
+LINE (368, 38)-(370, 40), 1, BF
+LINE (383, 23)-(385, 25), 1, BF
+LINE (383, 26)-(385, 28), 1, BF
+LINE (380, 29)-(382, 31), 1, BF
+LINE (383, 29)-(385, 31), 1, BF
+LINE (386, 29)-(388, 31), 1, BF
+LINE (383, 32)-(385, 34), 1, BF
+LINE (383, 35)-(385, 37), 1, BF
+LINE (383, 38)-(385, 40), 1, BF
+LINE (386, 38)-(388, 40), 1, BF
+LINE (398, 26)-(400, 28), 1, BF
+LINE (401, 26)-(403, 28), 1, BF
+LINE (395, 29)-(397, 31), 1, BF
+LINE (404, 29)-(406, 31), 1, BF
+LINE (395, 32)-(397, 34), 1, BF
+LINE (398, 32)-(400, 34), 1, BF
+LINE (401, 32)-(403, 34), 1, BF
+LINE (395, 35)-(397, 37), 1, BF
+LINE (398, 38)-(400, 40), 1, BF
+LINE (401, 38)-(403, 40), 1, BF
+LINE (416, 26)-(418, 28), 1, BF
+LINE (419, 26)-(421, 28), 1, BF
+LINE (416, 35)-(418, 37), 1, BF
+LINE (419, 35)-(421, 37), 1, BF
+LINE (80, 50)-(82, 52), 1, BF
+LINE (80, 53)-(82, 55), 1, BF
+LINE (80, 56)-(82, 58), 1, BF
+LINE (74, 59)-(76, 61), 1, BF
+LINE (77, 59)-(79, 61), 1, BF
+LINE (80, 59)-(82, 61), 1, BF
+LINE (71, 62)-(73, 64), 1, BF
+LINE (80, 62)-(82, 64), 1, BF
+LINE (71, 65)-(73, 67), 1, BF
+LINE (80, 65)-(82, 67), 1, BF
+LINE (74, 68)-(76, 70), 1, BF
+LINE (77, 68)-(79, 70), 1, BF
+LINE (80, 68)-(82, 70), 1, BF
+LINE (95, 50)-(97, 52), 1, BF
+LINE (95, 59)-(97, 61), 1, BF
+LINE (95, 62)-(97, 64), 1, BF
+LINE (95, 65)-(97, 67), 1, BF
+LINE (95, 68)-(97, 70), 1, BF
+LINE (110, 56)-(112, 58), 1, BF
+LINE (113, 56)-(115, 58), 1, BF
+LINE (107, 59)-(109, 61), 1, BF
+LINE (116, 59)-(118, 61), 1, BF
+LINE (107, 62)-(109, 64), 1, BF
+LINE (110, 62)-(112, 64), 1, BF
+LINE (113, 62)-(115, 64), 1, BF
+LINE (107, 65)-(109, 67), 1, BF
+LINE (110, 68)-(112, 70), 1, BF
+LINE (113, 68)-(115, 70), 1, BF
+LINE (143, 50)-(145, 52), 1, BF
+LINE (146, 50)-(148, 52), 1, BF
+LINE (149, 50)-(151, 52), 1, BF
+LINE (152, 50)-(154, 52), 1, BF
+LINE (155, 50)-(157, 52), 1, BF
+LINE (149, 53)-(151, 55), 1, BF
+LINE (149, 56)-(151, 58), 1, BF
+LINE (149, 59)-(151, 61), 1, BF
+LINE (149, 62)-(151, 64), 1, BF
+LINE (149, 65)-(151, 67), 1, BF
+LINE (149, 68)-(151, 70), 1, BF
+LINE (167, 50)-(169, 52), 1, BF
+LINE (164, 53)-(166, 55), 1, BF
+LINE (170, 53)-(172, 55), 1, BF
+LINE (161, 56)-(163, 58), 1, BF
+LINE (173, 56)-(175, 58), 1, BF
+LINE (161, 59)-(163, 61), 1, BF
+LINE (173, 59)-(175, 61), 1, BF
+LINE (161, 62)-(163, 64), 1, BF
+LINE (164, 62)-(166, 64), 1, BF
+LINE (167, 62)-(169, 64), 1, BF
+LINE (170, 62)-(172, 64), 1, BF
+LINE (173, 62)-(175, 64), 1, BF
+LINE (161, 65)-(163, 67), 1, BF
+LINE (173, 65)-(175, 67), 1, BF
+LINE (161, 68)-(163, 70), 1, BF
+LINE (173, 68)-(175, 70), 1, BF
+LINE (179, 50)-(181, 52), 1, BF
+LINE (182, 50)-(184, 52), 1, BF
+LINE (185, 50)-(187, 52), 1, BF
+LINE (188, 50)-(190, 52), 1, BF
+LINE (179, 53)-(181, 55), 1, BF
+LINE (191, 53)-(193, 55), 1, BF
+LINE (179, 56)-(181, 58), 1, BF
+LINE (191, 56)-(193, 58), 1, BF
+LINE (179, 59)-(181, 61), 1, BF
+LINE (182, 59)-(184, 61), 1, BF
+LINE (185, 59)-(187, 61), 1, BF
+LINE (188, 59)-(190, 61), 1, BF
+LINE (179, 62)-(181, 64), 1, BF
+LINE (191, 62)-(193, 64), 1, BF
+LINE (179, 65)-(181, 67), 1, BF
+LINE (191, 65)-(193, 67), 1, BF
+LINE (179, 68)-(181, 70), 1, BF
+LINE (182, 68)-(184, 70), 1, BF
+LINE (185, 68)-(187, 70), 1, BF
+LINE (188, 68)-(190, 70), 1, BF
+LINE (197, 59)-(199, 61), 1, BF
+LINE (200, 59)-(202, 61), 1, BF
+LINE (203, 59)-(205, 61), 1, BF
+LINE (206, 59)-(208, 61), 1, BF
+LINE (209, 59)-(211, 61), 1, BF
+LINE (215, 50)-(217, 52), 1, BF
+LINE (218, 50)-(220, 52), 1, BF
+LINE (221, 50)-(223, 52), 1, BF
+LINE (224, 50)-(226, 52), 1, BF
+LINE (227, 50)-(229, 52), 1, BF
+LINE (221, 53)-(223, 55), 1, BF
+LINE (221, 56)-(223, 58), 1, BF
+LINE (221, 59)-(223, 61), 1, BF
+LINE (221, 62)-(223, 64), 1, BF
+LINE (221, 65)-(223, 67), 1, BF
+LINE (221, 68)-(223, 70), 1, BF
+LINE (236, 53)-(238, 55), 1, BF
+LINE (239, 53)-(241, 55), 1, BF
+LINE (233, 56)-(235, 58), 1, BF
+LINE (242, 56)-(244, 58), 1, BF
+LINE (242, 59)-(244, 61), 1, BF
+LINE (236, 62)-(238, 64), 1, BF
+LINE (239, 62)-(241, 64), 1, BF
+LINE (242, 62)-(244, 64), 1, BF
+LINE (233, 65)-(235, 67), 1, BF
+LINE (242, 65)-(244, 67), 1, BF
+LINE (236, 68)-(238, 70), 1, BF
+LINE (239, 68)-(241, 70), 1, BF
+LINE (245, 68)-(247, 70), 1, BF
+LINE (254, 56)-(256, 58), 1, BF
+LINE (257, 56)-(259, 58), 1, BF
+LINE (260, 56)-(262, 58), 1, BF
+LINE (254, 59)-(256, 61), 1, BF
+LINE (254, 62)-(256, 64), 1, BF
+LINE (257, 62)-(259, 64), 1, BF
+LINE (260, 62)-(262, 64), 1, BF
+LINE (260, 65)-(262, 67), 1, BF
+LINE (254, 68)-(256, 70), 1, BF
+LINE (257, 68)-(259, 70), 1, BF
+LINE (260, 68)-(262, 70), 1, BF
+LINE (275, 53)-(277, 55), 1, BF
+LINE (275, 56)-(277, 58), 1, BF
+LINE (272, 59)-(274, 61), 1, BF
+LINE (275, 59)-(277, 61), 1, BF
+LINE (278, 59)-(280, 61), 1, BF
+LINE (275, 62)-(277, 64), 1, BF
+LINE (275, 65)-(277, 67), 1, BF
+LINE (275, 68)-(277, 70), 1, BF
+LINE (278, 68)-(280, 70), 1, BF
+LINE (290, 56)-(292, 58), 1, BF
+LINE (293, 56)-(295, 58), 1, BF
+LINE (287, 59)-(289, 61), 1, BF
+LINE (296, 59)-(298, 61), 1, BF
+LINE (287, 62)-(289, 64), 1, BF
+LINE (290, 62)-(292, 64), 1, BF
+LINE (293, 62)-(295, 64), 1, BF
+LINE (287, 65)-(289, 67), 1, BF
+LINE (290, 68)-(292, 70), 1, BF
+LINE (293, 68)-(295, 70), 1, BF
+LINE (308, 56)-(310, 58), 1, BF
+LINE (311, 56)-(313, 58), 1, BF
+LINE (308, 65)-(310, 67), 1, BF
+LINE (311, 65)-(313, 67), 1, BF
+LINE (71, 100)-(171, 80), 1
+LINE (171, 80)-(61, 80), 1
+LINE (61, 80)-(61, 10), 1
+LINE (61, 10)-(431, 10), 1
+LINE (431, 10)-(431, 80), 1
+LINE (431, 80)-(191, 80), 1
+LINE (191, 80)-(71, 100), 1
+
+Register 10, 18, 23, 79, ""
+Echo "Etwas mÅssen Sie wissen!"
+Echo ""
+Echo "Die Tabulator-Taste ist im mausfreien LaOS sehr wichtig."
+Echo "Sie wechseln mit ihr das Steuerelement. So kînnen Sie z.B."
+Echo "zwischen den Symbolen und dem Menu und einer SchaltflÑche"
+Echo "mit Tab umschalten."
+Echo ""
+Echo "Sie finden diese Taste links vom Q-Zeichen."
+Echo ""
+Echo ""
+Echo ""
+Echo ">>DrÅcken Sie TAB, um fortzufahren."
+
+DO
+WHILE INKEY$ <> "": WEND'Tastaturstapel leeren
+
+a$ = ""
+DO: a$ = INKEY$: LOOP UNTIL a$ <> ""'auf Eingabe warten
+IF a$ <> CHR$(9) THEN BEEP: Dialog "DrÅcken Sie die TAB-Taste!"
+
+LOOP UNTIL a$ = CHR$(9)
+
+CLW
+Echo "Hier kînnen Sie das gelernte gerademal ausprobieren:"
+Echo "Probieren Sie alles einmal anzuwÑhlen!"
+Echo ""
+Echo "Verwenden Sie die Tab-Taste, die Alt-Taste und die Pfeiltasten!"
+TextScale = 24
+Echo "ESC = weiterfahren"
+
+ClearControls 3
+ExitBox -1, -1
+MenuBox 2, 67, "Menu1"
+MenuBox 2, 74, "Menu2"
+
+Register 7, 5, 16, 35, "Programme"
+LoadSymbol "text", "Write"
+LoadSymbol "draw", "Draw"
+LoadSymbol "music", "Musik"
+ShowSymbols
+Register 7, 40, 20, 80, "Auswahl"
+TextScale = 9
+TextBreak = 42
+Control 0, 0, "Starten"
+Control 0, 0, "Datei laden"
+Control 0, 0, "Datei schliessen"
+DO
+TabNow = 1
+GetInp
+
+LOOP UNTIL keyb = "esc"
+TabNow = 0
+
+END SUB
+
+SUB TextBox (Zeilen, Spalten, Text$, Break)
+'Break heisst hier: Hier wird der Text gebrochen (Zeilenumbruch)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Zeilen > 24 THEN Zeilen = 24
+
+IF Spalten + LEN(Text$) > Right AND Break = 0 THEN Break = Right - Spalten
+IF Break = 0 THEN Break = LEN(Text$)
+IF Break = 0 THEN Spalten = Spalten - 1: Break = 1
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Text$) / Break + 1)
+IF Break = LEN(Text$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+ecr = Break * -1 + 1
+FOR i = 1 TO INT(LEN(Text$) / Break) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + Break
+PRINT MID$(Text$, ecr, Break)
+NEXT i
+ecr = 0
+
+
+TextScale = EndZeile + 1
+END SUB
+
+SUB TimeLock (Status)
+STATIC on.too
+STATIC tm
+Radius = 14 * 2
+Farbe1 = 12
+Farbe2 = 9
+x = 319 - Radius
+y = 174 - Radius
+
+SELECT CASE Status
+CASE 1:
+'Falls es das erste Mal ist, muss der Hintergrund noch gespeichert werden:
+IF on.too = 0 THEN on.too = 1: GET (319 - Radius, 174 - Radius)-(319 + Radius, 174 + Radius), Hintergrund
+
+LINE (x + Radius - Radius, y + Radius - Radius)-(x + Radius + Radius, y + Radius + Radius), 0, BF
+IF tm = 1 THEN tm = 0 ELSE tm = 1
+
+IF tm = 0 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe1
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe1
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe1, , , .9
+PAINT (x + Radius + 1, y + Radius), Farbe1
+PAINT (x + Radius - 1, y + Radius), Farbe1
+END IF
+
+
+IF tm = 1 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe2
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe2
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe2, , , .9
+PAINT (x + Radius, y + Radius + 1), Farbe2
+PAINT (x + Radius, y + Radius - 1), Farbe2
+END IF
+CASE 0: IF on.too <> 0 THEN on.too = 0: PUT (319 - Radius, 174 - Radius), Hintergrund, PSET: Stoppuhr(1) = 0
+END SELECT
+END SUB
+
+FUNCTION Trim$ (Variable$, Trennzeichen$, a)
+
+mcr = 0
+gef = 0
+FOR i = 1 TO LEN(Variable$)
+mcr = mcr + 1
+a$ = MID$(Variable$, mcr)
+IF LEFT$(a$, 1) = Trennzeichen$ THEN gef = gef + 1
+IF gef = a - 1 THEN EXIT FOR
+NEXT
+IF LEFT$(a$, 1) = Trennzeichen$ THEN a$ = MID$(a$, 2) ELSE a$ = a$
+
+mcr = 0
+FOR i = 1 TO LEN(a$)
+mcr = mcr + 1
+IF MID$(a$, mcr, 1) = Trennzeichen$ THEN a$ = LEFT$(a$, mcr - 1): EXIT FOR
+NEXT
+
+Trim$ = a$
+
+END FUNCTION
+

@@ -1,0 +1,342 @@
+'Dieses Game wurde Mitte 1997 realisiert.
+anfang:
+SCREEN 12
+CLS
+DIM box%(1 TO 20000)
+LINE (69, 184)-(69, 104), 11
+LINE (69, 104)-(109, 104), 11
+LINE (109, 104)-(117, 112), 11
+LINE (117, 112)-(117, 136), 11
+LINE (117, 136)-(109, 144), 11
+LINE (109, 144)-(93, 144), 11
+LINE (109, 144)-(117, 152), 11
+LINE (117, 152)-(117, 176), 11
+LINE (117, 176)-(109, 184), 11
+LINE (109, 184)-(69, 184), 11
+LINE (133, 176)-(141, 184), 11
+LINE (141, 184)-(173, 184), 11
+LINE (173, 184)-(181, 176), 11
+LINE (133, 176)-(133, 112), 11
+LINE (133, 112)-(141, 104), 11
+LINE (141, 104)-(173, 104), 11
+LINE (173, 104)-(181, 112), 11
+LINE (205, 104)-(197, 112), 11
+LINE (197, 112)-(197, 176), 11
+LINE (197, 176)-(205, 184), 11
+LINE (205, 184)-(237, 184), 11
+LINE (237, 184)-(245, 176), 11
+LINE (245, 176)-(245, 112), 11
+LINE (245, 112)-(237, 104), 11
+LINE (237, 104)-(205, 104), 11
+LINE (277, 184)-(317, 184), 11
+LINE (309, 144)-(277, 144), 11
+LINE (277, 104)-(317, 104), 11
+LINE (277, 104)-(277, 184), 11
+LINE (373, 184)-(365, 176), 11
+LINE (365, 104)-(365, 176), 11
+LINE (365, 176)-(357, 184), 11
+LINE (357, 184)-(341, 184), 11
+LINE (341, 184)-(333, 176), 11
+LINE (333, 176)-(333, 152), 11
+LINE (333, 152)-(341, 144), 11
+LINE (341, 144)-(365, 144), 11
+LINE (389, 184)-(389, 136), 11
+LINE (389, 112)-(389, 104), 11
+LINE (421, 128)-(421, 176), 11
+LINE (421, 176)-(429, 184), 11
+LINE (429, 184)-(437, 184), 11
+LINE (437, 184)-(445, 176), 11
+LINE (429, 144)-(413, 144), 11
+LINE (421, 128)-(421, 120), 11
+LINE (461, 184)-(461, 136), 11
+LINE (461, 112)-(461, 104), 11
+LINE (477, 152)-(477, 176), 11
+LINE (477, 176)-(485, 184), 11
+LINE (485, 184)-(509, 184), 11
+LINE (509, 184)-(517, 176), 11
+LINE (517, 176)-(517, 152), 11
+LINE (517, 152)-(509, 144), 11
+LINE (509, 144)-(485, 144), 11
+LINE (485, 144)-(477, 152), 11
+LINE (533, 184)-(533, 144), 11
+LINE (533, 152)-(541, 144), 11
+LINE (541, 144)-(565, 144), 11
+LINE (565, 144)-(573, 152), 11
+LINE (573, 152)-(573, 184), 11
+
+neu:
+COLOR 9
+LOCATE 18, 38: PRINT "Sound"
+LOCATE 20, 34: PRINT "Schwierigkeit"
+LOCATE 22, 35: PRINT "Startlevel"
+LOCATE 24, 34: PRINT "Game starten"
+LOCATE 26, 38: PRINT "Ende"
+COLOR 14
+LOCATE 20, 37: PRINT "w"
+LOCATE 22, 40: PRINT "l"
+LOCATE 24, 34: PRINT "G"
+LOCATE 26, 38: PRINT "E"
+LOCATE 18, 38: PRINT "S"
+a$ = INPUT$(1)
+
+IF a$ = "w" OR a$ = "W" THEN
+s = 0
+IF sgk$ = "  schwierig  " OR sgk$ = "" THEN sgk$ = "   einfach   ": s = 1: sgk = 3
+IF sgk$ = "   einfach   " AND s = 0 THEN sgk$ = "    mittel   ": s = 1: sgk = 6
+IF sgk$ = "    mittel   " AND s = 0 THEN sgk$ = "  schwierig  ": sgk = 10
+COLOR 9: LOCATE 20, 34: PRINT sgk$
+SLEEP 3
+END IF
+
+IF a$ = CHR$(27) OR a$ = "E" OR a$ = "e" THEN CLS : CHAIN "run.bas"
+
+IF a$ = "l" OR a$ = "L" THEN
+v2: COLOR 9: LOCATE 22, 34: PRINT "  (1-12)     ": LOCATE 22, 43
+PRINT "_": LOCATE 22, 43
+a$ = INPUT$(1)
+PRINT a$ + "_": LOCATE 22, 44
+B$ = INPUT$(1)
+PRINT B$
+c$ = a$ + B$
+IF VAL(c$) > 12 OR VAL(c$) = 0 THEN LOCATE 22, 43: PRINT "  ": GOTO v2
+level = VAL(c$)
+SLEEP 1
+END IF
+
+IF a$ = "s" OR a$ = "S" THEN
+COLOR 9
+IF sound$ = " aus " OR sound$ = "" THEN sound$ = " ein " ELSE sound$ = " aus "
+LOCATE 18, 38: PRINT sound$
+SLEEP 3
+END IF
+
+
+
+
+IF a$ = "G" OR a$ = "g" OR a$ = CHR$(13) THEN GOTO start
+
+GOTO neu
+
+
+start:
+IF level = 0 THEN level = 1
+IF sound$ = " ein " OR sound$ = "" THEN snd = 1 ELSE snd = 0
+IF sgk = 0 THEN sgk = 3
+xplus = 0
+
+ON KEY(1) GOSUB ende
+KEY(1) ON
+RANDOMIZE TIMER
+CLS
+DIM kugel%(1 TO 20000)
+COLOR 5
+LINE (59, 30)-(600, 440), , B
+LINE (580, 430)-(80, 39), , B
+COLOR 1
+LINE (88, 45)-(569, 424), , B
+COLOR 7
+LINE (569, 423)-(549, 413)
+LINE (568, 46)-(548, 56)
+LINE (88, 46)-(108, 56)
+LINE (88, 424)-(108, 414)
+LINE (108, 414)-(548, 56), , B
+LINE (104, 54)-(552, 54)
+LINE (552, 54)-(552, 414)
+PSET (552, 414)
+LINE (104, 416)-(552, 416)
+LINE (104, 416)-(104, 54)
+PRESET (298, 101), 0
+PRESET (298, 101), 0
+PRESET (298, 101), 0
+COLOR 12
+CIRCLE (333, 103), 8
+PAINT (337, 103)
+COLOR 15
+PSET (337, 103)
+PSET (336, 104)
+PSET (336, 105)
+PSET (335, 105)
+PSET (335, 106)
+PSET (334, 106)
+PSET (336, 103)
+PSET (336, 102)
+GET (325, 94)-(342, 111), kugel%
+COLOR 9
+LINE (285, 348)-(386, 348)
+LINE (386, 359)-(286, 359)
+CIRCLE (286, 354), 5
+CIRCLE (386, 354), 5
+PAINT (356, 354)
+PAINT (389, 354)
+PAINT (289, 354)
+COLOR 8
+LINE (288, 353)-(334, 353)
+LINE (338, 356)-(383, 356)
+GET (281, 348)-(392, 360), box%
+PUT (281, 348), box%
+gamestart:
+boxa = 281
+boxb = 348
+kugela = 325
+kugelb = 94
+plus = INT(RND * 2)
+kugelaplus = INT(RND * 2) + 1
+xneg = kugelaplus
+IF plus = 1 THEN kugelaplus = kugelaplus * -1: xneg = -xneg
+kugelbplus = 5
+'Initialising Computer-Speed
+a = TIMER
+csp = 0
+WHILE TIMER - a < .1
+csp = csp + 1
+WEND
+levelscore = INT(csp / 1 / level)
+treffer = 0
+game:
+IF treffer = 10 THEN GOTO levelchange
+LOCATE 1, 38: COLOR 14: PRINT "Level"; : PRINT level
+a$ = ""
+IF boxa > 528 THEN boxa = 528: xneg = 0
+IF boxa < 0 THEN boxa = 0: xneg = 0
+
+PUT (boxa, boxb), box%
+z = 0
+WHILE a$ = ""
+game1:
+z = z + 1: a$ = "": a$ = INKEY$
+IF z > levelscore + gsc THEN GOTO weiter
+WEND
+
+weiter:
+IF xneg <> 0 THEN
+PUT (boxa, boxb), box%
+boxa = boxa + xneg
+IF boxa > 528 THEN boxa = 528: xneg = 0
+IF boxa < 0 THEN boxa = 0: xneg = 0
+PUT (boxa, boxb), box%
+END IF
+IF kugelaplus > 8 THEN kugelaplus = 8
+IF kugelaplus < -8 THEN kugelaplus = -8
+
+PUT (kugela, kugelb), kugel%: kugela = kugela + kugelaplus: kugelb = kugelb + kugelbplus: PUT (kugela, kugelb), kugel%
+IF kugelb > 329 THEN GOTO aufprall
+IF kugelb < 59 THEN GOTO aufprall.oben
+IF kugela > 535 THEN GOTO aufprall.rechts
+IF kugela < 108 THEN GOTO aufprall.links
+z = 0
+IF a$ = "" THEN GOTO game1
+PUT (boxa, boxb), box%
+
+
+
+
+
+SELECT CASE a$
+CASE "4", CHR$(0) + "K": IF xneg < 0 THEN xneg = xneg - sgk ELSE xneg = 0
+xneg = xneg - sgk: GOTO 4
+CASE CHR$(27): GOTO anfang
+CASE "6", CHR$(0) + "M": IF xneg > 0 THEN xneg = xneg + sgk ELSE xneg = 0
+xneg = xneg + sgk: GOTO 6
+CASE ELSE: xneg = 0: GOTO game
+END SELECT
+
+
+4 boxa = boxa - sgk:  GOTO game
+
+6 boxa = boxa + sgk:  GOTO game
+
+
+ende:
+CHAIN "run.bas"
+
+aufprall:
+PUT (boxa, boxb), box%
+IF kugela > boxa + 111 OR kugela < boxa - 17 THEN GOTO over
+IF snd = 1 THEN PLAY "l20 o5 e"
+treffer = treffer + 1
+
+plus = 0
+IF xneg < 0 THEN plus = -1 * xneg / 2
+IF xneg > 0 THEN plus = -1 * xneg / 2
+
+kugelbplus = kugelbplus * -1
+kugelaplus = kugelaplus + plus
+GOTO game
+
+
+aufprall.oben:
+IF snd = 1 THEN PLAY "l20 o5 c"
+PUT (boxa, boxb), box%
+
+kugelbplus = kugelbplus * -1
+GOTO game
+
+aufprall.rechts:
+IF snd = 1 THEN PLAY "l20 o5 c"
+PUT (boxa, boxb), box%
+
+kugelaplus = kugelaplus * -1
+'kugelbplus = kugelbplus * -1
+IF kugela + kugelaplus > 535 THEN PUT (kugela, kugelb), kugel%: kugela = 535: PUT (kugela, kugelb), kugel%
+GOTO game
+
+
+aufprall.links:
+IF snd = 1 THEN PLAY "l20 o5 c"
+PUT (boxa, boxb), box%
+
+kugelaplus = kugelaplus * -1
+'kugelbplus = kugelbplus * -1
+IF kugela + kugelaplus < 108 THEN PUT (kugela, kugelb), kugel%: kugela = 108: PUT (kugela, kugelb), kugel%
+GOTO game
+
+over:
+COLOR 9
+LINE (179, 157)-(281, 157)
+LINE (181, 157)-(181, 267)
+LINE (181, 267)-(281, 267)
+LINE (281, 217)-(281, 267)
+LINE (281, 217)-(201, 217)
+LINE (301, 267)-(301, 157)
+LINE (301, 157)-(361, 157)
+LINE (361, 157)-(361, 267)
+LINE (361, 217)-(301, 217)
+LINE (381, 267)-(381, 157)
+LINE (381, 157)-(401, 157)
+LINE (401, 157)-(421, 267)
+LINE (421, 267)-(441, 267)
+LINE (441, 267)-(461, 157)
+LINE (461, 157)-(481, 157)
+LINE (481, 157)-(481, 267)
+LINE (501, 267)-(501, 157)
+LINE (501, 157)-(541, 157)
+LINE (501, 217)-(521, 217)
+LINE (501, 267)-(541, 267)
+COLOR 2
+LINE (115, 310)-(192, 356), , B
+LINE (212, 312)-(267, 356)
+LINE (267, 356)-(331, 314)
+LINE (351, 314)-(351, 364)
+LINE (351, 364)-(411, 364)
+LINE (386, 341)-(351, 341)
+LINE (351, 313)-(411, 313)
+LINE (435, 313)-(435, 363)
+LINE (435, 313)-(475, 313)
+LINE (475, 313)-(475, 333)
+LINE (475, 333)-(435, 333)
+LINE (438, 333)-(475, 361)
+IF snd = 1 THEN
+FOR i = 1000 TO 400 STEP -40
+SOUND i, 1
+NEXT
+END IF
+IF snd = 0 THEN a = TIMER: WHILE TIMER - a < 2: WEND: WHILE INKEY$ <> "": WEND
+GOTO anfang
+
+
+levelchange:
+level = level + 1
+treffer = 0
+levelscore = INT(csp / level)
+GOTO game
+

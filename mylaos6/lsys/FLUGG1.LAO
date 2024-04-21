@@ -1,0 +1,436 @@
+'Fluggs
+'Ein entspannendes Spiel von Urs Langmeier
+'(C) 1999, lavers. (Urs Langmeier)
+'
+'Gemacht am: 20. Juni 1999
+'21. Juni 1999
+
+DECLARE SUB ShowIntro ()
+DECLARE SUB ClearValues ()
+DECLARE SUB Absturz (Ursache$)
+DECLARE SUB Frame (x!, y!, x1!, y1!, del!)
+DECLARE SUB Note (Text$)
+DECLARE SUB LevelRead ()
+DECLARE SUB ShowMap (Bild$)
+DECLARE SUB angehalten ()
+DECLARE SUB goraeder (nv!, x!, y!)
+DECLARE SUB GoFlugzeug (nv!, x!, y!)
+
+ShowIntro
+
+DIM SHARED Befehle(2500, 5) AS SINGLE
+DIM SHARED Fahrwerk AS INTEGER
+CONST ausgefahren = -1, eingefahren = 0
+
+
+DIM SHARED Boden, StartAt, EndAt
+DIM SHARED Autor$, File$, HG AS INTEGER
+
+DIM SHARED xplus, yplus, bremsen, faufi
+DIM SHARED AlteZeit
+
+xplus = StartAt + 318
+yplus = 175
+
+Fahrwerk = eingefahren
+
+SCREEN 9
+COLOR 8, 15
+
+LevelRead
+
+DIM SHARED fx, fy
+
+fy = 50
+fx = 20
+
+AlteZeit = TIMER
+SCREEN 9, , 1, 0
+
+DO
+
+LINE (0, 0)-(640, 350), 0, BF
+
+ShowMap File$
+GoFlugzeug 1, fx, fy
+PCOPY 1, 0
+
+IF fx < 320 THEN fx = fx + 2.5
+
+
+a$ = INKEY$
+WHILE INKEY$ <> "": WEND
+afy = fy
+
+'SLEEP
+SELECT CASE a$
+CASE CHR$(0) + "H" 'up
+        IF fy < Boden THEN faufi = faufi + -1
+
+CASE CHR$(0) + "P" 'down
+        IF fy < Boden THEN faufi = faufi + 1
+
+CASE CHR$(13) 'enter
+        Fahrwerk = ausgefahren
+
+CASE CHR$(8) 'backspace
+        bremsen = bremsen + 1
+
+IF bremsen > 3 THEN
+        IF bremsen > 5 THEN bremsen = 5
+        IF fy < Boden THEN bremsen = 3 'ganz bremsen nur am Boden.
+END IF
+
+CASE CHR$(32) 'space
+        bremsen = bremsen - 1
+
+CASE CHR$(27) 'escape
+        SCREEN 9, , 0, 0: CLS
+        CHAIN "c:\laos\run.bas"
+
+END SELECT
+
+IF fy >= Boden AND bremsen < 0 THEN bremsen = bremsen + faufi / 4: faufi = 0
+
+
+IF TIMER < AlteZeit + 5 THEN SCREEN 9, , 0, 0: LOCATE 24, 3: PRINT Autor$; : SCREEN 9, , 1, 0
+
+IF bremsen < 5 THEN fy = fy + faufi + (bremsen / 5)'wenn gebremst wird, sinkt das Flugzeug
+IF bremsen >= 5 THEN angehalten
+
+IF fy <= 35 THEN yplus = yplus - (faufi + bremsen / 5): fy = afy
+IF fy > 35 AND yplus > 175 THEN yplus = yplus - (faufi + bremsen / 5): fy = afy
+
+IF fy > 40 THEN yplus = 175 'begleicht ungenauigkeiten
+
+IF fy > Boden THEN
+        IF faufi + (bremsen / 5) > 2 THEN
+                Absturz "Aufschlag mit zu hoher Geschwindigkeit."
+        ELSE
+                IF Fahrwerk = eingefahren THEN Absturz "Fahrwerk nicht ausgefahren!" ELSE fy = Boden
+        END IF
+END IF
+
+IF -5 + bremsen < 0 THEN xplus = xplus - 5 + bremsen
+
+IF xplus < EndAt THEN xplus = StartAt + 318
+
+LOOP
+
+
+'Daten zu den Levels:
+'    Bodenh”he, x-Start, x-End,Autor$,File$
+
+DATA 268,640,-2000, "Urs Langmeier", "Flugg1.map",15
+DATA 210,640,-2600, "Aurelia Langmeier","Flugg2.map",15
+DATA 210,640,-2400,"Urs Langmeier", "Flugg3.map",15
+DATA 210,640,-3400,"Urs Langmeier", "Flugg4.map", 0
+DATA 210,640,-2400, "Aurelia Langmeier", "Flugg5.map", 7
+DATA 210,640,-2400, "Urs Langmeier", "Flugg6.map", 63
+
+
+
+'Folgendes muss der letzte Eintrag sein: nicht l”schen!
+DATA 0,0,0,"","",0
+
+CHAIN "c:\laos\run.bas"
+
+SUB Absturz (Ursache$)
+IF Ursache$ = "" THEN Ursache$ = "Unbekannt"
+
+Ursache2$ = ""
+IF LEN(Ursache$) > 35 THEN
+  Ursache2$ = SPACE$(9) + MID$(Ursache$, 35): Ursache$ = LEFT$(Ursache$, 34) + "-"
+END IF
+
+Note "new"
+Note "Unfall"
+Note ""
+Note "Ursache: " + Ursache$
+Note Ursache2$
+
+Frame 30, 13, 45, 15, 1
+LOCATE 14, 31: PRINT "  OK - weiter!"
+
+PCOPY 1, 0
+
+WHILE INKEY$ <> "": WEND
+a$ = "": DO: a$ = INKEY$: LOOP UNTIL a$ = CHR$(13)
+ClearValues
+END SUB
+
+SUB angehalten
+
+IF POINT(fx + 18, fy + 21) <> 7 AND POINT(fx + 18, fy + 22) <> 7 THEN
+        'Landung nicht auf Piste:
+        'PSET (fx + 18, fy + 21), 14
+
+        Note "new"
+        Note "Falsche Landung"
+        Note ""
+        Note "Sie sind zwar gelandet, aber nicht auf der"
+        Note "Piste! Starten sie und machen sie's richtig."
+
+        Frame 28, 13, 46, 15, 1
+        LOCATE 14, 29: PRINT "  OK - mach ich   "
+
+        PCOPY 1, 0
+        WHILE INKEY$ <> "": WEND
+        a$ = "": DO: a$ = INKEY$: LOOP UNTIL a$ = CHR$(13)
+        bremsen = 4
+        'ClearValues
+        EXIT SUB
+END IF
+
+
+Note "new"
+Note "Gelandet"
+Note ""
+Note "Herzliche Gratulation!"
+Note "Sie sind erfolgreich gelandet."
+
+Frame 28, 13, 47, 15, 1
+LOCATE 14, 29: PRINT "OK - n„chstes Land!"
+PCOPY 1, 0
+
+WHILE INKEY$ <> "": WEND
+a$ = "": DO: a$ = INKEY$: LOOP UNTIL a$ = CHR$(13)
+ClearValues
+LevelRead 'liest das n„chste Land ein
+END SUB
+
+SUB ClearValues
+xplus = StartAt + 318
+yplus = 175
+
+Fahrwerk = eingefahren
+
+fy = 50
+fx = 20
+
+bremsen = 0
+faufi = 0
+
+AlteZeit = TIMER
+END SUB
+
+SUB Frame (x, y, x1, y1, del)
+x = x * 8 - 4
+y = y * 14 - 7
+x1 = x1 * 8 + 2
+y1 = y1 * 14 - 7
+IF del = 1 THEN LINE (x, y)-(x1, y1), 0, BF
+LINE (x, y)-(x1, y1), 8, B
+'Schatten:
+LINE (x + 2, y1 + 1)-(x1 + 1, y1 + 1), 8
+LINE (x1 + 1, y1)-(x1 + 1, y + 1), 8
+LINE (x1 + 2, y1 + 1)-(x1 + 2, y + 2), 8
+
+END SUB
+
+SUB GoFlugzeug (nv, x, y)
+LINE (nv * -63.5 + x, nv * -20.25 + y)-(nv * -50.5 + x, nv * -20.25 + y), 8
+LINE (nv * -50.5 + x, nv * -20.25 + y)-(nv * -47.5 + x, nv * -8.75 + y), 8
+LINE (nv * -47.5 + x, nv * -8.75 + y)-(nv * -45 + x, nv * -4.5 + y), 8
+LINE (nv * -45 + x, nv * -4.5 + y)-(nv * -38.75 + x, nv * -3 + y), 8
+LINE (nv * -38.75 + x, nv * -3 + y)-(nv * -15.5 + x, nv * -2 + y), 8
+LINE (nv * -15.5 + x, nv * -2 + y)-(nv * 19 + x, nv * -2 + y), 8
+LINE (nv * 19 + x, nv * -2 + y)-(nv * 34.25 + x, nv * -1.75 + y), 8
+LINE (nv * 34.25 + x, nv * -1.75 + y)-(nv * 43.5 + x, nv * -.5 + y), 8
+LINE (nv * 43.5 + x, nv * -.5 + y)-(nv * 47.25 + x, nv * 1 + y), 8
+LINE (nv * 47.25 + x, nv * 1 + y)-(nv * 50.25 + x, nv * 3.25 + y), 8
+LINE (nv * 50.25 + x, nv * 3.25 + y)-(nv * 51.75 + x, nv * 4.5 + y), 8
+LINE (nv * 51.75 + x, nv * 4.5 + y)-(nv * 52.5 + x, nv * 4.75 + y), 8
+LINE (nv * 52.5 + x, nv * 4.75 + y)-(nv * 53 + x, nv * 5.75 + y), 8
+LINE (nv * 53 + x, nv * 5.75 + y)-(nv * 52.75 + x, nv * 7.25 + y), 8
+LINE (nv * 52.75 + x, nv * 7.25 + y)-(nv * 51.75 + x, nv * 8.75 + y), 8
+LINE (nv * 51.75 + x, nv * 8.75 + y)-(nv * 47.5 + x, nv * 12 + y), 8
+LINE (nv * 47.5 + x, nv * 12 + y)-(nv * 41 + x, nv * 13.75 + y), 8
+LINE (nv * 41 + x, nv * 13.75 + y)-(nv * 29.5 + x, nv * 14.75 + y), 8
+LINE (nv * 29.5 + x, nv * 14.75 + y)-(nv * -9.5 + x, nv * 14.5 + y), 8
+LINE (nv * -9.5 + x, nv * 14.5 + y)-(nv * -31.5 + x, nv * 14.25 + y), 8
+LINE (nv * -31.5 + x, nv * 14.25 + y)-(nv * -47.5 + x, nv * 13.5 + y), 8
+LINE (nv * -47.5 + x, nv * 13.5 + y)-(nv * -54.75 + x, nv * 11.75 + y), 8
+LINE (nv * -54.75 + x, nv * 11.75 + y)-(nv * -58.25 + x, nv * 9.25 + y), 8
+LINE (nv * -58.25 + x, nv * 9.25 + y)-(nv * -60.5 + x, nv * 6.25 + y), 8
+LINE (nv * -60.5 + x, nv * 6.25 + y)-(nv * -62.75 + x, nv * 1.75 + y), 8
+LINE (nv * -62.75 + x, nv * 1.75 + y)-(nv * -63.75 + x, nv * -2.25 + y), 8
+LINE (nv * -63.75 + x, nv * -2.25 + y)-(nv * -63.75 + x, nv * -20 + y), 8
+IF HG > 0 THEN PAINT (nv * -55.75 + x, nv * -.5 + y), 7, 8: PAINT (nv * 18 + x, nv * 7 + y), 7, 8
+LINE (nv * 51.5 + x, nv * 4.5 + y)-(nv * 46 + x, nv * 4.5 + y), 8
+LINE (nv * 46 + x, nv * 4.5 + y)-(nv * 44.25 + x, nv * 0 + y), 8
+LINE (nv * 45 + x, nv * 4.5 + y)-(nv * 39.5 + x, nv * 4.5 + y), 8
+LINE (nv * 39.5 + x, nv * 4.5 + y)-(nv * 38.25 + x, nv * 0 + y), 8
+LINE (nv * 38.25 + x, nv * 0 + y)-(nv * 43.75 + x, nv * .5 + y), 8
+LINE (nv * 43.75 + x, nv * .5 + y)-(nv * 45 + x, nv * 4.5 + y), 8
+LINE (nv * -13.5 + x, nv * 5.75 + y)-(nv * -41.25 + x, nv * 21.25 + y), 8
+LINE (nv * -41.25 + x, nv * 21.25 + y)-(nv * -29.5 + x, nv * 21.75 + y), 8
+LINE (nv * -29.5 + x, nv * 21.75 + y)-(nv * 5.5 + x, nv * 6.25 + y), 8
+LINE (nv * 5.5 + x, nv * 6.25 + y)-(nv * -13.75 + x, nv * 5.5 + y), 8
+LINE (nv * -15.25 + x, nv * -2 + y)-(nv * -29.5 + x, nv * -9 + y), 8
+LINE (nv * -29.5 + x, nv * -9 + y)-(nv * -17 + x, nv * -8.75 + y), 8
+LINE (nv * -17 + x, nv * -8.75 + y)-(nv * 3.25 + x, nv * -2 + y), 8
+LINE (nv * -44.5 + x, nv * .25 + y)-(nv * -28.5 + x, nv * .75 + y), 8
+LINE (nv * -28.5 + x, nv * .75 + y)-(nv * -28.5 + x, nv * 4 + y), 8
+LINE (nv * -28.5 + x, nv * 4 + y)-(nv * -44.5 + x, nv * 3.5 + y), 8
+LINE (nv * -44.5 + x, nv * .25 + y)-(nv * -44.5 + x, nv * 3.25 + y), 8
+LINE (nv * -27.25 + x, nv * 1 + y)-(nv * -23.25 + x, nv * 6.75 + y), 8, B
+LINE (nv * -21 + x, nv * 1.25 + y)-(nv * 19.25 + x, nv * 1 + y), 8
+LINE (nv * 19.25 + x, nv * 1 + y)-(nv * 19.25 + x, nv * 4 + y), 8
+LINE (nv * 19.25 + x, nv * 4 + y)-(nv * -21.25 + x, nv * 4.25 + y), 8
+LINE (nv * -21.25 + x, nv * 4.25 + y)-(nv * -21 + x, nv * 1.5 + y), 8
+LINE (nv * 20.75 + x, nv * 1 + y)-(nv * 24.75 + x, nv * 7 + y), 8, B
+LINE (nv * 26 + x, nv * 1 + y)-(nv * 37.25 + x, nv * .25 + y), 8
+LINE (nv * 37.25 + x, nv * .25 + y)-(nv * 37.75 + x, nv * 4.5 + y), 8
+LINE (nv * 37.75 + x, nv * 4.5 + y)-(nv * 25.75 + x, nv * 4.25 + y), 8
+LINE (nv * 25.75 + x, nv * 4.25 + y)-(nv * 26 + x, nv * 1.25 + y), 8
+PAINT (nv * -27.75 + x, nv * 16.75 + y), 8, 8
+PAINT (nv * -15.5 + x, nv * 12.25 + y), 8, 8
+PAINT (nv * -15 + x, nv * -5 + y), 8, 8
+LINE (nv * -63.5 + x, nv * -2.25 + y)-(nv * -57.5 + x, nv * -2.5 + y), 8
+LINE (nv * -57.5 + x, nv * -2.5 + y)-(nv * -48.75 + x, nv * -2.75 + y), 8
+LINE (nv * -48.75 + x, nv * -2.75 + y)-(nv * -43.5 + x, nv * -4 + y), 8
+PAINT (nv * -61.5 + x, nv * -12 + y), 12, 8
+PAINT (nv * -32.25 + x, nv * 2.5 + y), 3, 8
+PAINT (nv * 8.5 + x, nv * 2.25 + y), 3, 8
+PAINT (nv * 18 + x, nv * 2.75 + y), 3, 8
+PAINT (nv * 31.75 + x, nv * 2.5 + y), 3, 8
+PAINT (nv * 41.75 + x, nv * 3 + y), 3, 8
+PAINT (nv * 47.25 + x, nv * 3 + y), 3, 8
+
+LINE (nv * -54.75 + x, nv * -6.75 + y)-(nv * -58 + x, nv * -15.75 + y), 15, BF
+LINE (nv * -62.5 + x, nv * -12.75 + y)-(nv * -50.25 + x, nv * -10 + y), 15, BF
+LINE (nv * -40 + x, nv * .5 + y)-(nv * -40 + x, nv * 3.5 + y), 8
+LINE (nv * -35 + x, nv * .75 + y)-(nv * -35 + x, nv * 3.75 + y), 8
+LINE (nv * -17.25 + x, nv * 1.5 + y)-(nv * -17.25 + x, nv * 4 + y), 8
+LINE (nv * -13.5 + x, nv * 1.5 + y)-(nv * -13.5 + x, nv * 4 + y), 8
+LINE (nv * -9.25 + x, nv * 1.25 + y)-(nv * -9.25 + x, nv * 4 + y), 8
+LINE (nv * -5.625 + x, nv * 1.25 + y)-(nv * -5.625 + x, nv * 4 + y), 8
+LINE (nv * -2 + x, nv * 1.25 + y)-(nv * -2 + x, nv * 3.875 + y), 8
+LINE (nv * 1.625 + x, nv * 1.25 + y)-(nv * 1.625 + x, nv * 4 + y), 8
+LINE (nv * 5.875 + x, nv * 1 + y)-(nv * 5.875 + x, nv * 3.875 + y), 8
+LINE (nv * 9.5 + x, nv * 1.125 + y)-(nv * 9.5 + x, nv * 3.875 + y), 8
+LINE (nv * 12.5 + x, nv * 1.125 + y)-(nv * 12.5 + x, nv * 3.875 + y), 8
+LINE (nv * 15.75 + x, nv * 1.25 + y)-(nv * 15.75 + x, nv * 3.875 + y), 8
+LINE (nv * 29.75 + x, nv * .75 + y)-(nv * 29.75 + x, nv * 4.25 + y), 8
+LINE (nv * 33.5 + x, nv * .5 + y)-(nv * 33.75 + x, nv * 4.25 + y), 8
+PAINT (nv * -25.25 + x, nv * 4.75 + y), 8, 8
+PAINT (nv * 23.5 + x, nv * 2.75 + y), 8, 8
+IF Fahrwerk = ausgefahren THEN goraeder 1, x, y
+END SUB
+
+SUB goraeder (nv, x, y)
+LINE (nv * 16 + x, nv * 15 + y)-(nv * 18 + x, nv * 17 + y), 8
+LINE (nv * 18 + x, nv * 17 + y)-(nv * 17 + x, nv * 20 + y), 8
+CIRCLE (nv * 17 + x, nv * 20 + y), nv * 1, 8, , , 1
+LINE (nv * -44 + x, nv * 14 + y)-(nv * -42 + x, nv * 17 + y), 8
+LINE (nv * -42 + x, nv * 17 + y)-(nv * -42 + x, nv * 19 + y), 8
+CIRCLE (nv * -42 + x, nv * 19 + y), nv * 1, 8, , , 1
+
+END SUB
+
+SUB LevelRead
+'Liest die Daten zum neuen Level
+'
+'DIM SHARED Boden, StartAt, EndAt
+'DIM SHARED Autor$, File$
+'
+READ Boden, StartAt, EndAt, Autor$, File$, HG
+
+IF File$ = "" THEN
+
+        Note "new"
+        Note "Spiel beendet"
+        Note ""
+        Note "Leider hat es kein Land mehr."
+        Note "Sie haben das Spiel erfolgreich geschafft!"
+
+        Frame 28, 13, 47, 15, 1
+        LOCATE 14, 29: PRINT "  OK - bis bald!"
+
+        PCOPY 1, 0
+        WHILE INKEY$ <> "": WEND
+        a$ = "": DO: a$ = INKEY$: LOOP UNTIL a$ = CHR$(13)
+        ClearValues
+        SCREEN 9, , 0, 0
+        CHAIN "c:\laos\run.bas":
+
+END IF
+
+COLOR 15, HG
+END SUB
+
+SUB Note (Text$) 'Notizblock
+STATIC Zeile
+IF LCASE$(Text$) = "new" THEN Zeile = 8: EXIT SUB
+IF Zeile <= 8 THEN Zeile = 8: LOCATE 8, 15: PRINT SPACE$(36): Frame 15, 8, 60, 16, 1
+LOCATE Zeile, 16
+
+IF HG = 63 THEN COLOR 8, HG: COLOR 8 ELSE COLOR 15, HG
+PRINT Text$
+
+Zeile = Zeile + 1
+END SUB
+
+SUB ShowIntro
+SCREEN 9, , 0, 0
+
+CLS
+COLOR 8, 15
+
+xplus = 360
+yplus = 140
+ShowMap "fluggsit.lds"
+WHILE INKEY$ <> "": WEND
+nz = TIMER + 5
+a$ = "": DO: a$ = INKEY$: LOOP WHILE a$ = "" AND TIMER < nz
+END SUB
+
+SUB ShowMap (Bild$)
+STATIC AltesBild AS STRING
+
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+
+
+IF Bild$ <> AltesBild THEN
+        'Bild zuerst laden:
+
+CLOSE 1: OPEN Bild$ FOR BINARY AS 1
+
+i = 0
+DO
+i = i + 1
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+LOOP WHILE Befehle(i, 0) <> 0
+
+END IF
+
+i = 0
+DO
+i = i + 1
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3)
+CASE "m"
+LINE (0, 0)-(639, 349), Befehle(i, 4), B
+PAINT (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4)
+
+CASE "l": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), B
+CASE "b": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), BF
+CASE "k": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), , , Befehle(i, 5)
+CASE "x": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), Befehle(i + 1, 1), Befehle(i + 1, 2), Befehle(i, 5)
+          i = i + 1
+END SELECT
+LOOP WHILE Befehle(i, 0) <> 0
+
+LINE (0, 0)-(639, 349), 8, B
+
+i = 0
+
+AltesBild = Bild$
+
+END SUB
+

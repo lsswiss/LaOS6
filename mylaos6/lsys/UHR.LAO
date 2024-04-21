@@ -1,0 +1,340 @@
+DECLARE SUB CLW ()
+DECLARE SUB Beschriftung ()
+
+ON ERROR GOTO fehlernext
+
+SCREEN 9
+
+CLW
+
+
+CIRCLE (319, 174), 160, 1, , , .7300003
+CIRCLE (319, 174), 140, 1, , , .7300003
+PAINT (169, 174), 1, 1
+PAINT (319, 174), 3, 1
+Beschriftung 'zeigt die Bezeichnung "BCO Design (C)" an und die 4 Striche
+'PSET (319, 174), 1
+LOCATE 13, 54: PRINT MID$(DATE$, 4, 2)
+LINE (423, 167)-(440, 182), 9, B 'Datums-Rahmen
+
+CONST PI = 3.141593
+
+CONST Radius = 98
+CONST X = 319, Y = 174
+
+start:
+Stunde = VAL(LEFT$(TIME$, 2))
+Minute = VAL(MID$(TIME$, 4, 2))
+Sekunde = VAL(RIGHT$(TIME$, 2))
+
+
+Beschriftung
+IF altSta > 0 THEN LINE (X, Y)-(altSta, altStb), 3'lîschen des alten Zeigers
+IF altMina > 0 THEN LINE (X, Y)-(altMina, altMinb), 3 'lîschen des alten Zeigers
+
+'Anzeige der Stunde:
+'zur Stunde als Kommawert die Minuten hinzufÅgen:
+Stunde = Stunde + (Minute * 1 / 60)
+
+Winkel = Stunde * 30 - 180
+Winkel = Winkel * PI / 180 'Umrechnung ins Bogenmass (wird von Sin und Cos benîtigt)
+
+a = X + -((Radius / 2) * SIN(Winkel))
+B = Y + (Radius / 2) * COS(Winkel)
+'a = X + Radius * SIN(Winkel)
+'b = Y + Radius * COS(Winkel)
+
+
+LINE (X, Y)-(a, B), 1
+altSta = a: altStb = B
+
+'Anzeige der Minuten:
+'zur Minute als Kommawert die Sekunden hinzufÅgen:
+Minute = Minute + (Sekunde * 1 / 60)
+
+Winkel = Minute * 6 - 180
+Winkel = Winkel * PI / 180 'Umrechnung ins Bogenmass (wird von Sin und Cos benîtigt)
+
+a = X + -(Radius * SIN(Winkel))
+B = Y + Radius * COS(Winkel)
+
+LINE (X, Y)-(a, B), 11
+altMina = a: altMinb = B
+
+'Anzeige der Sekunden:
+
+Winkel = Sekunde * 6 - 180
+Winkel = Winkel * PI / 180 'Umrechnung ins Bogenmass (wird von Sin und Cos benîtigt)
+
+a = X + -(Radius * SIN(Winkel))
+B = Y + Radius * COS(Winkel)
+
+LINE (X, Y)-(a, B), 14, , 30840 'gestrichelt
+
+SLEEP 1
+k$ = INKEY$
+SELECT CASE k$
+    CASE CHR$(27): CHAIN "c:\laos\run.bas"
+    CASE CHR$(0) + "M"'right
+                        min$ = LTRIM$(STR$(INT(Minute + 1)))
+                        std$ = LTRIM$(STR$(INT(Stunde)))
+                            IF VAL(min$) > 59 THEN min$ = "00"
+
+                        IF LEN(min$) < 2 THEN min$ = "0" + min$
+                        TIME$ = std$ + ":" + min$
+                        LOCATE 2, 3: PRINT TIME$
+
+    CASE CHR$(0) + "K"'left
+                        min$ = LTRIM$(STR$(INT(Minute - 1)))
+                        std$ = LTRIM$(STR$(INT(Stunde)))
+                            IF VAL(min$) < 0 THEN min$ = "59"
+
+                        IF LEN(min$) < 2 THEN min$ = "0" + min$
+                        TIME$ = std$ + ":" + min$
+                        LOCATE 2, 3: PRINT TIME$
+
+    CASE CHR$(0) + "H"'up
+                        min$ = LTRIM$(STR$(INT(Minute)))
+                        std$ = LTRIM$(STR$(INT(Stunde + 1)))
+                            IF VAL(std$) > 23 THEN std$ = "01"
+
+                        IF LEN(min$) < 2 THEN min$ = "0" + min$
+                        TIME$ = std$ + ":" + min$
+                        LOCATE 2, 3: PRINT TIME$
+
+    CASE CHR$(0) + "P"'down
+                        min$ = LTRIM$(STR$(INT(Minute)))
+                        std$ = LTRIM$(STR$(INT(Stunde - 1)))
+                            IF VAL(std$) < 0 THEN std$ = "23"
+
+                        IF LEN(min$) < 2 THEN min$ = "0" + min$
+                        TIME$ = std$ + ":" + min$
+                        LOCATE 2, 3: PRINT TIME$
+
+END SELECT
+
+'Alter Sekundenzeiger lîschen:
+LINE (X, Y)-(a, B), 3, , 30840 'gestrichelt
+
+GOTO start
+
+CHAIN "c:\laos\run.bas"
+
+PRINT "UngÅltiges System": SLEEP 2
+SYSTEM
+
+fehlernext:
+RESUME NEXT
+
+SUB Beschriftung
+LINE (449, 174)-(469, 174), 14
+LINE (189, 174)-(169, 174), 14
+LINE (319, 84)-(319, 64), 14
+LINE (319, 264)-(319, 284), 14
+LINE (279, 234)-(279, 234), 9, BF
+LINE (280, 234)-(280, 234), 9, BF
+LINE (281, 234)-(281, 234), 9, BF
+LINE (282, 234)-(282, 234), 9, BF
+LINE (279, 235)-(279, 235), 9, BF
+LINE (283, 235)-(283, 235), 9, BF
+LINE (279, 236)-(279, 236), 9, BF
+LINE (283, 236)-(283, 236), 9, BF
+LINE (279, 237)-(279, 237), 9, BF
+LINE (280, 237)-(280, 237), 9, BF
+LINE (281, 237)-(281, 237), 9, BF
+LINE (282, 237)-(282, 237), 9, BF
+LINE (279, 238)-(279, 238), 9, BF
+LINE (283, 238)-(283, 238), 9, BF
+LINE (279, 239)-(279, 239), 9, BF
+LINE (283, 239)-(283, 239), 9, BF
+LINE (279, 240)-(279, 240), 9, BF
+LINE (280, 240)-(280, 240), 9, BF
+LINE (281, 240)-(281, 240), 9, BF
+LINE (282, 240)-(282, 240), 9, BF
+LINE (286, 234)-(286, 234), 9, BF
+LINE (287, 234)-(287, 234), 9, BF
+LINE (288, 234)-(288, 234), 9, BF
+LINE (285, 235)-(285, 235), 9, BF
+LINE (289, 235)-(289, 235), 9, BF
+LINE (285, 236)-(285, 236), 9, BF
+LINE (285, 237)-(285, 237), 9, BF
+LINE (285, 238)-(285, 238), 9, BF
+LINE (285, 239)-(285, 239), 9, BF
+LINE (289, 239)-(289, 239), 9, BF
+LINE (286, 240)-(286, 240), 9, BF
+LINE (287, 240)-(287, 240), 9, BF
+LINE (288, 240)-(288, 240), 9, BF
+LINE (292, 234)-(292, 234), 9, BF
+LINE (293, 234)-(293, 234), 9, BF
+LINE (294, 234)-(294, 234), 9, BF
+LINE (291, 235)-(291, 235), 9, BF
+LINE (295, 235)-(295, 235), 9, BF
+LINE (291, 236)-(291, 236), 9, BF
+LINE (295, 236)-(295, 236), 9, BF
+LINE (291, 237)-(291, 237), 9, BF
+LINE (295, 237)-(295, 237), 9, BF
+LINE (291, 238)-(291, 238), 9, BF
+LINE (295, 238)-(295, 238), 9, BF
+LINE (291, 239)-(291, 239), 9, BF
+LINE (295, 239)-(295, 239), 9, BF
+LINE (292, 240)-(292, 240), 9, BF
+LINE (293, 240)-(293, 240), 9, BF
+LINE (294, 240)-(294, 240), 9, BF
+LINE (303, 234)-(303, 234), 9, BF
+LINE (304, 234)-(304, 234), 9, BF
+LINE (305, 234)-(305, 234), 9, BF
+LINE (306, 234)-(306, 234), 9, BF
+LINE (303, 235)-(303, 235), 9, BF
+LINE (307, 235)-(307, 235), 9, BF
+LINE (303, 236)-(303, 236), 9, BF
+LINE (307, 236)-(307, 236), 9, BF
+LINE (303, 237)-(303, 237), 9, BF
+LINE (307, 237)-(307, 237), 9, BF
+LINE (303, 238)-(303, 238), 9, BF
+LINE (307, 238)-(307, 238), 9, BF
+LINE (303, 239)-(303, 239), 9, BF
+LINE (307, 239)-(307, 239), 9, BF
+LINE (303, 240)-(303, 240), 9, BF
+LINE (304, 240)-(304, 240), 9, BF
+LINE (305, 240)-(305, 240), 9, BF
+LINE (306, 240)-(306, 240), 9, BF
+LINE (310, 236)-(310, 236), 9, BF
+LINE (311, 236)-(311, 236), 9, BF
+LINE (309, 237)-(309, 237), 9, BF
+LINE (312, 237)-(312, 237), 9, BF
+LINE (309, 238)-(309, 238), 9, BF
+LINE (310, 238)-(310, 238), 9, BF
+LINE (311, 238)-(311, 238), 9, BF
+LINE (309, 239)-(309, 239), 9, BF
+LINE (310, 240)-(310, 240), 9, BF
+LINE (311, 240)-(311, 240), 9, BF
+LINE (316, 236)-(316, 236), 9, BF
+LINE (317, 236)-(317, 236), 9, BF
+LINE (318, 236)-(318, 236), 9, BF
+LINE (316, 237)-(316, 237), 9, BF
+LINE (316, 238)-(316, 238), 9, BF
+LINE (317, 238)-(317, 238), 9, BF
+LINE (318, 238)-(318, 238), 9, BF
+LINE (318, 239)-(318, 239), 9, BF
+LINE (316, 240)-(316, 240), 9, BF
+LINE (317, 240)-(317, 240), 9, BF
+LINE (318, 240)-(318, 240), 9, BF
+LINE (323, 234)-(323, 234), 9, BF
+LINE (323, 237)-(323, 237), 9, BF
+LINE (323, 238)-(323, 238), 9, BF
+LINE (323, 239)-(323, 239), 9, BF
+LINE (323, 240)-(323, 240), 9, BF
+LINE (328, 236)-(328, 236), 9, BF
+LINE (329, 236)-(329, 236), 9, BF
+LINE (327, 237)-(327, 237), 9, BF
+LINE (330, 237)-(330, 237), 9, BF
+LINE (328, 238)-(328, 238), 9, BF
+LINE (329, 238)-(329, 238), 9, BF
+LINE (330, 238)-(330, 238), 9, BF
+LINE (330, 239)-(330, 239), 9, BF
+LINE (328, 240)-(328, 240), 9, BF
+LINE (329, 240)-(329, 240), 9, BF
+LINE (330, 240)-(330, 240), 9, BF
+LINE (333, 237)-(333, 237), 9, BF
+LINE (335, 237)-(335, 237), 9, BF
+LINE (336, 237)-(336, 237), 9, BF
+LINE (333, 238)-(333, 238), 9, BF
+LINE (334, 238)-(334, 238), 9, BF
+LINE (336, 238)-(336, 238), 9, BF
+LINE (333, 239)-(333, 239), 9, BF
+LINE (336, 239)-(336, 239), 9, BF
+LINE (333, 240)-(333, 240), 9, BF
+LINE (336, 240)-(336, 240), 9, BF
+LINE (348, 234)-(348, 234), 9, BF
+LINE (347, 235)-(347, 235), 9, BF
+LINE (346, 236)-(346, 236), 9, BF
+LINE (346, 237)-(346, 237), 9, BF
+LINE (346, 238)-(346, 238), 9, BF
+LINE (347, 239)-(347, 239), 9, BF
+LINE (348, 240)-(348, 240), 9, BF
+LINE (352, 234)-(352, 234), 9, BF
+LINE (353, 234)-(353, 234), 9, BF
+LINE (354, 234)-(354, 234), 9, BF
+LINE (351, 235)-(351, 235), 9, BF
+LINE (355, 235)-(355, 235), 9, BF
+LINE (351, 236)-(351, 236), 9, BF
+LINE (351, 237)-(351, 237), 9, BF
+LINE (351, 238)-(351, 238), 9, BF
+LINE (351, 239)-(351, 239), 9, BF
+LINE (355, 239)-(355, 239), 9, BF
+LINE (352, 240)-(352, 240), 9, BF
+LINE (353, 240)-(353, 240), 9, BF
+LINE (354, 240)-(354, 240), 9, BF
+LINE (358, 234)-(358, 234), 9, BF
+LINE (359, 235)-(359, 235), 9, BF
+LINE (360, 236)-(360, 236), 9, BF
+LINE (360, 237)-(360, 237), 9, BF
+LINE (360, 238)-(360, 238), 9, BF
+LINE (359, 239)-(359, 239), 9, BF
+LINE (358, 240)-(358, 240), 9, BF
+END SUB
+
+SUB CLW
+'Lade Farbschema:
+DIM Fensterfarbe AS INTEGER, Randfarbe AS INTEGER, Schattenfarbe AS INTEGER, Controlfarbe AS INTEGER
+DIM Symbolactiv AS INTEGER, SymbactStil AS INTEGER, SymbolFrame AS INTEGER, SymbolColor AS INTEGER
+DIM Hintergrundfarbe  AS INTEGER, Farbe AS INTEGER, IconVerticalSpace AS INTEGER
+DIM InfoTime AS INTEGER, InfoColor  AS INTEGER, InfoFrame, Datumsformat AS INTEGER
+
+CLOSE 1: OPEN "c:\laos\config.lcg" FOR RANDOM AS 1
+GET 1, 1, Schema$
+
+DIM M(1 TO 15)
+
+IF Schema$ <> "" THEN
+
+IF LOF(1) <> 0 THEN
+CLOSE 1: OPEN "c:\laos\" + Schema$ + ".scl" FOR INPUT AS 1: LINE INPUT #1, a$
+FOR i = 1 TO 15
+INPUT #1, M(i)
+NEXT
+ELSE M(10) = 15: M(1) = 14
+END IF
+
+ELSE M(10) = 15: M(1) = 14
+END IF
+
+Fensterfarbe = M(1)'Fensterfarben
+Randfarbe = M(2)
+Schattenfarbe = M(3)
+Controlfarbe = M(4)  'SchaltflÑchenfarbe
+Symbolactiv = M(5) 'Umrahmungsfarbe des aktiven Symbols
+SymbactStil = M(6) 'Umrahmungs-Stil des aktivierten Symbols (-1=voll)
+
+SymbolFrame = M(7) 'Farbe des Symbolrahmens
+SymbolColor = M(8) 'Farbe des Symbolhintergrundes
+
+Hintergrundfarbe = M(9) 'Bildschirmfarben
+Farbe = M(10) '= Vordergrundfarbe
+
+IconVerticalSpace = M(11) 'Setzt den Vertikalen Standard-Abstand der Symbole
+                            'Auf Null gesetzt ist der Abstand genÅgend.
+InfoTime = M(12)'Setzt die zu verstreichende Zeit in Sekunden, bis die Quick-
+                  'Info erscheint. (0=Ausgeschaltet)
+InfoColor = M(13) 'Setzt die Farbe, in der der Quick-Info-Text erscheint.
+InfoFrame = M(14) 'Setzt die Farbe des Quick-Info-Rahmens.
+
+Datumsformat = M(15)
+
+ERASE M
+
+'Fenster:
+LINE (2, 2)-(637, 347), 0, BF
+LINE (0, 0)-(638, 348), Fensterfarbe, B
+'Schatten:
+LINE (1, 1)-(637, 1), Schattenfarbe
+LINE (1, 1)-(1, 347), Schattenfarbe
+'Rand:
+LINE (639, 349)-(0, 349), Randfarbe
+LINE (639, 349)-(639, 0), Randfarbe
+
+VIEW
+COLOR Farbe, Hintergrundfarbe
+
+END SUB
+

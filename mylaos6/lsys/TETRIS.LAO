@@ -1,0 +1,3044 @@
+'BCO Tetris fÅr LaOS 4 (Version 1.0)
+'Ausgezeichnet mit dem "Designed for LaOS 4 (C)"-Logo.
+
+'Programmiert unter QBASIC von Urs Langmeier am 24. Mai 1999
+'(C) Urs Langmeier
+'Nicht kopieren. Kein Verleih. Kein Verkauf.
+
+'Hilfesystem: BCO Hilfesystem V 1.0 (C) 1999 by Urs Langmeier
+
+'LaOS Version 4.00 Copyright (C) Urs Langmeier, New BCO
+'FrÅhling 1999. 13.5.1999
+
+'>>>Nur erforderliche Prozeduren<<<
+
+'Entwickelt unter QBASIC von Urs Langmeier
+'Idee & Programmierung: Urs Langmeier
+
+'Alle Urheber- und Leistungsschutzrechte vorbehalten. Der Code darf nicht un-
+'erlaubt kopiert oder verkauft werden.
+
+
+DECLARE SUB VeryGoodPlane ()
+DECLARE SUB ShowPicture (PNr!, Streck!)
+DECLARE SUB ShowHelp (Index2$)
+DECLARE SUB HelpKey (Taste AS INTEGER)
+DECLARE SUB ShowNextFigur (fig AS INTEGER)
+DECLARE SUB GameOverPlane ()
+DECLARE SUB DrawTable ()
+DECLARE SUB SaveScore (Wert AS INTEGER, Name$)
+DECLARE FUNCTION IsTopScore% (Wert%)
+DECLARE SUB InputTopNameAndSaveIt ()
+DECLARE FUNCTION NameOf$ (p$, laenge%)
+DECLARE SUB ShowTopScore ()
+DECLARE FUNCTION Score$ (Index!)
+DECLARE SUB EnterLevel ()
+DECLARE SUB MainMenu ()
+DECLARE FUNCTION IsItOKToDraw! (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+DECLARE SUB DrawBackGround ()
+DECLARE SUB TypeUserPoints ()
+DECLARE SUB twait (Zeit AS SINGLE)
+DECLARE SUB GetOnLines ()
+DECLARE FUNCTION IsItALine% (row%)
+DECLARE SUB MessageBeep (i%)
+DECLARE FUNCTION UserKey$ ()
+DECLARE SUB ReDrawFigur (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+DECLARE SUB PlayGame ()
+DECLARE SUB DropDown ()
+DECLARE SUB DrawFigur (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+DECLARE SUB STable (x%, y%, Farbe%)
+DECLARE FUNCTION RegItem$ (Nenner$)
+DECLARE FUNCTION LinkIt$ ()
+DECLARE FUNCTION Drivelist$ (Nr!)
+DECLARE SUB Switchdrive (lw$)
+DECLARE SUB ExitBox (x!, y!)
+DECLARE FUNCTION exist! (p$)
+DECLARE SUB TextBox (Zeilen!, Spalten!, Text$, Break!)
+DECLARE SUB Register (z!, s!, zu!, su!, Text$)
+DECLARE SUB FrameWindow (a!, B!, c!, d!, del!)
+DECLARE SUB Echo (Text$)
+DECLARE SUB GetInp ()
+DECLARE SUB Control (Zeilen!, Spalten!, Text$)
+DECLARE SUB CLW ()
+DECLARE FUNCTION Gerade! (Zahl!)
+DECLARE FUNCTION IsExist! (Datei$, InOrdner$)
+DECLARE FUNCTION IsEmptyBox! (Ordner$)
+DECLARE FUNCTION IsExistBox! (Box$)
+DECLARE FUNCTION Trim$ (Variable$, Trennzeichen$, a!)
+DECLARE FUNCTION MenuInt$ (Item$, Trennzeichen$)
+DECLARE SUB Dialog (Caption$)
+DECLARE SUB Menuact (Menu$)
+DECLARE FUNCTION SDate$ ()
+DECLARE SUB TimeLock (Status!)
+DECLARE SUB StoppUhrBeep (Uhr!)
+DECLARE FUNCTION Ltext$ (Text$, ab!)
+DECLARE SUB ShowInfo ()
+DECLARE FUNCTION GetKey$ ()
+DECLARE SUB ClearControls (Connect!)
+DECLARE SUB NextControl ()
+DECLARE SUB LastControl ()
+DECLARE SUB Activate (Ctrl$)
+DECLARE FUNCTION InputBox$ (Zeilen!, Spalten!, Text$, Break!, MaxDown!)
+
+
+ON ERROR GOTO fehlernext
+SCREEN 9
+VIEW PRINT 1 TO 25
+
+DIM SHARED Hintergrund(456) AS LONG
+DIM SHARED Stoppuhr(1 TO 4) AS INTEGER '1 ist Reserviert!
+DIM SHARED AlteZeit(1 TO 4) AS LONG
+DIM SHARED TextScale AS INTEGER
+DIM SHARED TextBreak AS INTEGER
+DIM SHARED Activ AS STRING
+DIM SHARED ControlNr AS INTEGER
+DIM SHARED ControlList(10) AS STRING
+DIM SHARED Break AS INTEGER
+DIM SHARED EBox.left AS INTEGER, EBox.top AS INTEGER
+DIM SHARED Left AS INTEGER, Top AS INTEGER, Right AS INTEGER, Down AS INTEGER
+DIM SHARED NextBreak AS INTEGER
+DIM SHARED QuickInfos(10) AS STRING
+DIM SHARED ControlConnect AS INTEGER 'Zur Unterscheidung der 3 Eingabecontrols
+DIM SHARED MenuList(5) AS STRING, MenuNr AS INTEGER
+DIM SHARED Focus AS STRING
+DIM SHARED Keyb AS STRING
+DIM SHARED Change(2) AS INTEGER
+DIM SHARED errorlevel AS INTEGER
+DIM SHARED Choice AS INTEGER, Pictures(4) AS STRING
+DIM SHARED Combo(1 TO 1, 1 TO 1) AS STRING
+DIM SHARED ActivItem AS STRING, DriveName AS STRING
+DIM SHARED Bef2(5) AS SINGLE
+
+
+FesteEinstellungen:
+WIDTH 80, 25
+
+Einstellungen:
+DIM SHARED Fensterfarbe AS INTEGER, Randfarbe AS INTEGER, Schattenfarbe AS INTEGER, Controlfarbe AS INTEGER
+DIM SHARED Symbolactiv AS INTEGER, SymbactStil AS INTEGER, SymbolFrame AS INTEGER, SymbolColor AS INTEGER
+DIM SHARED Hintergrundfarbe  AS INTEGER, Farbe AS INTEGER, IconVerticalSpace AS INTEGER
+DIM SHARED InfoTime AS INTEGER, InfoColor  AS INTEGER, InfoFrame, Datumsformat AS INTEGER
+
+CLOSE 1: OPEN "c:\laos\config.lcg" FOR RANDOM AS 1
+GET 1, 1, Schema$
+
+DIM M(1 TO 15)
+
+IF Schema$ <> "" THEN
+
+IF LOF(1) <> 0 THEN
+CLOSE 1: OPEN "c:\laos\" + Schema$ + ".scl" FOR INPUT AS 1: LINE INPUT #1, a$
+FOR i = 1 TO 15
+INPUT #1, M(i)
+NEXT
+ELSE M(10) = 15: M(1) = 14
+END IF
+
+ELSE M(10) = 15: M(1) = 14
+END IF
+
+Fensterfarbe = M(1)'Fensterfarben
+Randfarbe = M(2)
+Schattenfarbe = M(3)
+Controlfarbe = M(4)  'SchaltflÑchenfarbe
+Symbolactiv = M(5) 'Umrahmungsfarbe des aktiven Symbols
+SymbactStil = M(6) 'Umrahmungs-Stil des aktivierten Symbols (-1=voll)
+
+SymbolFrame = M(7) 'Farbe des Symbolrahmens
+SymbolColor = M(8) 'Farbe des Symbolhintergrundes
+
+Hintergrundfarbe = M(9) 'Bildschirmfarben
+Farbe = M(10) '= Vordergrundfarbe
+
+IconVerticalSpace = M(11) 'Setzt den Vertikalen Standard-Abstand der Symbole
+                            'Auf Null gesetzt ist der Abstand genÅgend.
+InfoTime = M(12)'Setzt die zu verstreichende Zeit in Sekunden, bis die Quick-
+                  'Info erscheint. (0=Ausgeschaltet)
+InfoColor = M(13) 'Setzt die Farbe, in der der Quick-Info-Text erscheint.
+InfoFrame = M(14) 'Setzt die Farbe des Quick-Info-Rahmens.
+
+Datumsformat = M(15)
+
+ERASE M
+
+CONST Fe1 = 6, Fe2 = 4, Fe3 = 75 'Startfensterkoordinaten
+DIM SHARED Fe4
+IF IconVerticalSpace = 0 THEN Fe4 = 20 ELSE Fe4 = 21
+
+Stoppuhr(2) = 60 '2.Stoppuhr: Bildschirmschoner
+
+
+VorStart:
+CLOSE
+VIEW
+COLOR Farbe, Hintergrundfarbe
+Switchdrive "c"
+
+Code = 0 'Legt die Ereignisverfolgung fÅr die Alt-Taste fest
+FOR i = 15 TO 19
+KEY i, CHR$(Code) + CHR$(56)
+ON KEY(i) GOSUB AltKey
+Code = Code + 32
+NEXT i
+Code = 0: i = 0
+
+Programm:
+HelpKey 1
+'Schreiben Sie hier Ihren persînlichen Code:
+
+
+TYPE TetrisPunkt
+        Farbe AS INTEGER
+END TYPE
+DIM SHARED Table(1 TO 10, 1 TO 20) AS TetrisPunkt
+DIM SHARED Direction AS INTEGER, YCol AS INTEGER
+DIM SHARED UserLines AS INTEGER, UserPoints AS INTEGER, UserLevel AS INTEGER
+DIM SHARED LevelTime AS SINGLE, SoundOn AS INTEGER
+DIM SHARED NurEinTest AS INTEGER, NurVorschau AS INTEGER
+
+CONST RandAnschlag = 1, Anschlag = 2, LinieGeschafft = 3, GameOver = 4, Runter = 5, Pfeiltasten = 6, Drehen = 7, LandGeschafft = 8
+CONST MaxScore = 10
+CONST HighScoreFile = "tetris.hsc"
+CONST ErrGanzUnten = 6, ErrRand = 7, ErrAngestossen = 8, ErrGameOver = 9
+DIM SHARED SeinPlatz AS INTEGER, HelpIndex AS STRING, Helped AS INTEGER
+
+UserLevel = 1
+LevelTime = 2
+SoundOn = -1
+
+MainMenu
+
+
+CHAIN "c:\laos\run.bas"
+TimeEreignis:
+TIMER OFF
+ShowInfo
+RETURN
+
+
+AltKey:
+IF MenuList(1) <> "" THEN Activate CHR$(0): ControlConnect = 1: Activate MenuList(1): MenuNr = 1
+RETURN
+
+fehlernext:
+errorlevel = 1
+RESUME NEXT
+
+Hilfeknopf:
+IF HelpIndex = "" THEN SOUND 200, 1
+ShowHelp HelpIndex
+RETURN
+
+DATA "Hilfesystem:"
+DATA "™ZurÅck"
+DATA "™Hauptmenu"
+DATA "Im Hauptmenu kînnen Sie zwischen folgenden Sachen wÑhlen:"
+DATA "|Spiel starten"
+DATA "|Startland: 1"
+DATA "|Audio-Effekte: ein"
+DATA "|TopScore-Liste"
+DATA "WÑhlen Sie den Eintrag aus, zu welchem Sie nÑhere Hilfe mîchten."
+DATA ""
+DATA "|Info"
+DATA "™Spiel starten"
+DATA "WÑhlen Sie diese SchaltflÑche mit der Eingabetaste aus, um das Spiel"
+DATA "zu starten."
+DATA "|Wie spiele ich?"
+DATA "|ZurÅck"
+
+DATA "™Startland: 1"
+DATA "Sie kînnen das Startland wÑhlen."
+DATA "Sie kînnen Zahlen von 1 - 100 eingeben."
+DATA "Je hîher das Startland ist, desto schneller fallen die Figuren"
+DATA "hinunter."
+DATA "|ZurÅck"
+
+DATA "™Audio-Effekte: ein"
+DATA "Falls Sie keine Tîne hîren wollen, wÑhrend dem Spiel, so mÅssen Sie"
+DATA "hier draufdrÅcken. (Und somit den Ton ausschalten)"
+DATA "|ZurÅck"
+
+DATA "™TopScore-Liste"
+DATA "Wenn Sie die TopScore-Liste ansehen, so kînnen Sie erfahren, wer"
+DATA "dieses Spiel auf Ihrem Computer schon gespielt hat, und wie gut er"
+DATA "gespielt hat."
+DATA ""
+DATA "Es werden nur die 10 Spieler mit der meisten Punktzahl aufgelistet."
+DATA ""
+DATA "Am Anfang ist diese Liste bei Ihnen vielleicht noch leer."
+DATA "|ZurÅck"
+
+DATA "™Info"
+DATA "BCO Tetris wurde vom 22. Mai - 24. Mai in QBasic fÅr LaOS geschrieben."
+DATA ""
+DATA "Autor: Urs Langmeier"
+DATA ""
+DATA "Bitte kopieren Sie dieses Spiel nicht."
+DATA ""
+DATA "Das Spiel darf nicht kopiert werden. Der Quelltext darf ohne meine"
+DATA "schriftliche Genehmigung nur fÅr private Zwecke geÑndert werden."
+DATA ""
+DATA "Alle Urheber- und Leistungsschutzrechte vorbehalten. Nicht kopieren."
+DATA ""
+DATA ""
+DATA "|ZurÅck"
+DATA "BCO Hilfesystem V 1.0 (C) 1999, BCO corp. Urs Langmeier
+DATA ""
+
+DATA "™Wie spiele ich?"
+DATA "Ziel des Spiels ist, mit den Figuren eine horizontale Linie zu bilden."
+DATA "Wenn Sie das schaffen, bekommen Sie eine gewisse Anzahl Punkte."
+DATA ""
+DATA "Wenn Sie gleich vier Linien miteinander schaffen, dann bekommen Sie noch"
+DATA "mehr Punkte."
+DATA ""
+DATA "Die  Figur mÅssen Sie mit den Pfeiltasten bewegen."
+DATA "Der Pfeil nach oben dreht die Figur um 90¯"
+DATA "#bcottrs.lds"
+DATA "|ZurÅck"
+
+DATA "™Ende"
+DATA ""
+
+CHAIN "c:\laos\run.bas"
+
+SUB Activate (Ctrl$)
+SELECT CASE ControlConnect
+CASE 0 'Controls
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = Ctrl$
+IF a$ = "" THEN EXIT SUB
+'ControlNr = i
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1 'Menus
+i = 0
+Activ = Ctrl$
+DO
+i = i + 1
+a$ = MenuList(i)
+IF a$ = "" THEN EXIT DO
+Menuact a$
+LOOP UNTIL a$ = ""
+
+
+
+END SELECT
+END SUB
+
+SUB ClearControls (Connect)
+SELECT CASE Connect
+CASE 0: ControlNr = 0: ERASE ControlList: ERASE QuickInfos
+CASE 1: MenuNr = 0: ERASE MenuList: ERASE QuickInfos
+CASE 3 'Alle lîschen
+ControlNr = 0: ERASE ControlList: ERASE QuickInfos
+MenuNr = 0: ERASE MenuList: ERASE QuickInfos
+END SELECT
+
+END SUB
+
+SUB CLW
+'Fenster:
+LINE (2, 2)-(637, 347), 0, BF
+LINE (0, 0)-(638, 348), Fensterfarbe, B
+'Schatten:
+LINE (1, 1)-(637, 1), Schattenfarbe
+LINE (1, 1)-(1, 347), Schattenfarbe
+'Rand:
+LINE (639, 349)-(0, 349), Randfarbe
+LINE (639, 349)-(639, 0), Randfarbe
+
+TextScale = 2 '=Zeile
+TextBreak = 2 '=Spalte
+EBox.left = 603: EBox.top = 321
+Left = 2: Top = 2: Right = 79: Down = 24
+END SUB
+
+SUB Control (Zeilen, Spalten, Text$)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak
+IF Zeilen > Down THEN Zeilen = Top: Spalten = NextBreak + 1: TextScale = Top: TextBreak = NextBreak
+
+IF LEN(Text$) + Spalten + 2 > NextBreak THEN NextBreak = LEN(Text$) + Spalten + 2
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + LEN(Text$)
+EndZeile = Zeilen + INT(LEN(Text$) / 80 + 1)
+IF LEN(Text$) = 80 THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+LOCATE Zeilen, Spalten: COLOR Farbe: PRINT Text$
+'LINE (a, B)-(c, d), Farbe, B
+'PAINT (a + 1, B + 1), Controlfarbe, Farbe
+LINE (a, B)-(c, d), Controlfarbe, B
+
+'Schatten: (Wird angezeigt, falls das Control aktiviert ist.
+IF Activ = Text$ THEN
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+'Control eintragen:
+a$ = Zeilen$ + Spalten$ + Text$
+i = 0
+DO: i = i + 1
+IF ControlList(i) = a$ THEN GOTO 2
+LOOP UNTIL ControlList(i) = ""
+ControlList(i) = a$
+ControlNr = 1
+
+
+2 Activ = Text$: ControlConnect = 0: TextScale = Zeilen + 2
+END SUB
+
+SUB Dialog (Caption$)
+IF LEN(Caption$) < 22 THEN Caption$ = STRING$(INT((22 - LEN(Kennung$)) / 2), " ") + Caption$ + STRING$(CINT((22 - LEN(Kennung$)) / 2 + .1), " ")
+
+IF LEN(Caption$) > 303 THEN Caption$ = LEFT$(Caption$, 300) + "..."
+IF LEN(Caption$) > 76 THEN Length = 76 ELSE Length = LEN(Caption$)
+Spalten = INT(40 - Length / 2 + 1)
+Zeilen = 11 - INT(LEN(Caption$) / 76) + 1
+
+x1! = Spalten * 8 - 11
+y1! = Zeilen * 14 - 17
+EndSpalten = 40 + INT(Length / 2)
+EndZeilen = 14 + INT(LEN(Caption$) / 76)
+IF INT(LEN(Caption$) / 76) > 1 THEN EndZeilen = EndZeilen - (INT(LEN(Caption$) / 76) - 1)
+IF LEN(Caption$) < 76 THEN EndZeilen = EndZeilen + 1
+x2! = EndSpalten * 8 + 4
+y2! = EndZeilen * 14 - 4
+Groesse = 4 + INT(((PMAP(x2!, 0) - PMAP(x1!, 0) + 1) * (1) + 7) / 8) * 2 * (PMAP(y2!, 1) - PMAP(y1!, 1) + 1)
+DIM Background(Groesse) AS INTEGER
+
+
+GET (x1!, y1!)-(x2!, y2!), Background
+
+FrameWindow x1!, y1!, x2! - 1, y2! - 1, 1
+
+ecr = 1
+FOR i = 1 TO INT(LEN(Caption$) / 76) + 1
+LOCATE Zeilen, Spalten
+PRINT MID$(Caption$, ecr, 76)
+ecr = ecr + 76
+Zeilen = Zeilen + 1
+NEXT
+
+TextBox Zeilen + 1, 33, "      OK", 14
+
+DO
+B$ = a$
+a$ = GetKey
+LOOP UNTIL a$ = "esc" OR a$ = CHR$(13)
+IF a$ = "esc" THEN Keyb = "esc" ELSE Keyb = B$
+PUT (x1!, y1!), Background, PSET: x1! = 0: y1! = 0: EXIT SUB
+
+
+END SUB
+
+SUB DrawBackGround
+VIEW
+CLW
+VIEW (2, 2)-(637, 347)
+RANDOMIZE TIMER
+DIM s AS STRING
+
+s = ""
+l% = INT(RND * 6) + 1
+FOR i = 1 TO l%
+        s = s + CHR$(INT(RND * 255) + 1)
+NEXT
+
+PAINT (50, 50), s
+ExitBox -1, -1
+VIEW (200, 25)-(440, 325), 0, InfoColor
+
+END SUB
+
+SUB DrawFigur (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+'
+'Wichtig: Falls Sie hier neue Figuren hinzufÅgen, mÅssen Sie folgendes
+'         beachten: Die bersten Punkte mÅssen zuerst angezeigt werden.
+'         Deshalb von oben her mit dem Zeichnen beginnen.
+'         (Sonst kann es sein, dass die Figur plîtzlich stehen bleibt!)
+
+
+
+SELECT CASE FigurNr
+CASE 1 '4-er Stecken
+SELECT CASE Direction
+        CASE 0, 2: STable x - 1, y, YCol: STable x, y, YCol: STable x + 1, y, YCol: STable x + 2, y, YCol
+        CASE 1, 3: STable x, y - 1, YCol: STable x, y, YCol: STable x, y + 1, YCol: STable x, y + 2, YCol
+END SELECT
+
+CASE 2 '4-er Block
+SELECT CASE Direction
+        CASE 0, 1, 2, 3: STable x, y, YCol: STable x + 1, y, YCol: STable x, y + 1, YCol: STable x + 1, y + 1, YCol
+END SELECT
+
+CASE 3 'Dreieck
+SELECT CASE Direction
+        CASE 0: STable x - 1, y, YCol: STable x, y, YCol: STable x + 1, y, YCol: STable x, y + 1, YCol
+        CASE 1: STable x, y - 1, YCol: STable x, y, YCol: STable x, y + 1, YCol: STable x + 1, y, YCol
+        CASE 2: STable x, y - 1, YCol: STable x - 1, y, YCol: STable x, y, YCol: STable x + 1, y, YCol
+        CASE 3: STable x, y - 1, YCol: STable x, y, YCol: STable x, y + 1, YCol: STable x - 1, y, YCol
+END SELECT
+
+CASE 4 'L 1
+SELECT CASE Direction
+        CASE 0: STable x - 1, y, YCol: STable x, y, YCol: STable x, y + 1, YCol: STable x, y + 2, YCol
+        CASE 1: STable x - 1, y, YCol: STable x, y, YCol: STable x + 1, y, YCol: STable x - 1, y + 1, YCol
+        CASE 2: STable x - 1, y, YCol: STable x - 1, y + 1, YCol: STable x - 1, y + 2, YCol: STable x, y + 2, YCol
+        CASE 3: STable x + 1, y - 1, YCol: STable x - 1, y, YCol: STable x, y, YCol: STable x + 1, y, YCol
+END SELECT
+
+CASE 5 'L 2
+SELECT CASE Direction
+        CASE 0: STable x, y - 1, YCol: STable x + 1, y - 1, YCol: STable x, y, YCol: STable x, y + 1, YCol
+        CASE 1: STable x, y - 1, YCol: STable x, y, YCol: STable x + 1, y, YCol: STable x + 2, y, YCol
+        CASE 2: STable x + 1, y - 1, YCol: STable x + 1, y, YCol: STable x + 1, y + 1, YCol: STable x, y + 1, YCol
+        CASE 3: STable x, y - 1, YCol: STable x + 1, y - 1, YCol: STable x + 2, y - 1, YCol: STable x + 2, y, YCol
+END SELECT
+
+CASE 6 'h 1
+SELECT CASE Direction
+        CASE 0, 2: STable x, y - 1, YCol: STable x, y, YCol: STable x + 1, y, YCol: STable x + 1, y + 1, YCol
+        CASE 1, 3: STable x + 1, y + 1, YCol: STable x, y + 1, YCol: STable x, y + 2, YCol: STable x - 1, y + 2, YCol
+END SELECT
+
+CASE 7 'h 2
+SELECT CASE Direction
+        CASE 0, 2: STable x + 1, y - 1, YCol: STable x + 1, y, YCol: STable x, y, YCol: STable x, y + 1, YCol
+        CASE 1, 3: STable x - 1, y + 1, YCol: STable x, y + 1, YCol: STable x, y + 2, YCol: STable x + 1, y + 2, YCol
+END SELECT
+
+END SELECT
+
+END SUB
+
+DEFINT A-Z
+'
+SUB DrawTable
+'zeichnet das Spielfeld neu
+
+FOR z = 1 TO UBOUND(Table, 2)
+
+FOR s = LBOUND(Table, 1) TO UBOUND(Table, 1)
+STable s, z, Table(s, z).Farbe
+NEXT
+
+NEXT
+
+END SUB
+
+DEFSNG A-Z
+FUNCTION Drivelist$ (Nr)
+STATIC LastNr
+IF Nr < 1 THEN Nr = LastNr + 1
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+GET 1, Nr, a$
+IF a$ = "" THEN GET 1, 1, a$: Nr = 1
+
+LastNr = Nr
+Drivelist = LEFT$(a$, 1)
+CLOSE 1
+END FUNCTION
+
+SUB DropDown
+DIM Figur AS INTEGER, NextFigur AS INTEGER
+LevelTime = 1 / UserLevel
+
+NextFigur = INT(RND(1) * 7) + 1
+
+
+NeueFigur:
+Figur = NextFigur 'aktuelle Figur wird zu dieser, die vorher die nÑchste gewesen ist
+NextFigur = INT(RND(1) * 7) + 1 'die nÑchste Figur wird generiert.
+
+Direction = 0
+ShowNextFigur NextFigur
+
+IF UserLines >= 10 THEN
+        UserLines = 0: UserLevel = UserLevel + 1: TypeUserPoints
+        LevelTime = 1 / UserLevel
+        MessageBeep LandGeschafft
+END IF
+
+IF Hintergrundfarbe = 63 THEN YCol = INT(RND * 14) + 1 ELSE YCol = INT(RND * 15) + 1
+
+DIM x AS INTEGER, y AS INTEGER
+
+x = 5
+y = 1
+
+
+DO
+IF NOT IsItOKToDraw(Figur, x, y) THEN
+        IF errorlevel = ErrGameOver THEN
+                IF UserPoints >= 1000 THEN VeryGoodPlane
+                MessageBeep GameOver
+                GameOverPlane
+                ClearControls 3: GetInp
+                IF IsTopScore(UserPoints) THEN InputTopNameAndSaveIt
+                UserLines = 0
+                UserPoints = 0
+                EXIT SUB
+        END IF
+END IF
+
+DrawFigur Figur, x, y
+
+nz = TIMER + LevelTime
+a$ = ""
+DO
+a$ = UserKey
+
+IF a$ <> "" THEN
+ReDrawFigur Figur, x, y
+ax = x
+ay = y
+
+
+MBeep% = 0
+
+SELECT CASE a$
+CASE "up":
+ad = Direction
+
+Direction = Direction + 1
+IF Direction > 3 THEN Direction = 0
+
+IF NOT IsItOKToDraw(Figur, x, y) THEN Direction = ad: MBeep% = RandAnschlag: GOTO 21
+
+MBeep% = Drehen
+
+CASE "right":
+ax = x: x = x + 1
+IF NOT IsItOKToDraw(Figur, x, y) THEN x = ax: MBeep% = RandAnschlag: GOTO 21
+
+CASE "left":
+ax = x: x = x - 1
+IF NOT IsItOKToDraw(Figur, x, y) THEN x = ax: MBeep% = RandAnschlag: GOTO 21
+
+CASE "down": IF IsItOKToDraw(Figur, x, y + 1) THEN y = y + 1
+'MBeep% = Runter
+
+CASE "esc": EXIT SUB
+END SELECT
+
+21
+IF a$ = "down" AND errorlevel = ErrAngestossen THEN
+                        DrawFigur Figur, x, y
+                        MessageBeep Anschlag
+                        GetOnLines
+                        GOTO NeueFigur
+END IF
+
+IF IsItOKToDraw(Figur, x, y) THEN
+
+
+DrawFigur Figur, x, y
+IF MBeep% > 0 THEN MessageBeep MBeep%
+
+ELSE
+
+        SELECT CASE errorlevel
+                CASE ErrAngestossen
+                        MessageBeep Anschlag
+                        GetOnLines
+                        GOTO NeueFigur
+                CASE ErrRand
+                CASE ErrGameOver
+                        IF UserPoints >= 1000 THEN VeryGoodPlane
+                        MessageBeep GameOver
+                        GameOverPlane
+                        ClearControls 3: GetInp
+                        IF IsTopScore(UserPoints) THEN InputTopNameAndSaveIt
+                        UserLines = 0
+                        UserPoints = 0
+                        EXIT SUB
+        END SELECT
+
+END IF
+
+END IF 'a$<>""
+
+
+LOOP UNTIL TIMER >= nz
+
+ReDrawFigur Figur, x, y
+
+IF IsItOKToDraw(Figur, x, y + 1) THEN
+        y = y + 1
+ELSE
+        SELECT CASE errorlevel
+                CASE ErrAngestossen
+                        DrawFigur Figur, x, y
+                        MessageBeep Anschlag
+                        GetOnLines
+                        GOTO NeueFigur
+                CASE ErrRand
+                CASE ErrGameOver
+                        IF UserPoints >= 1000 THEN VeryGoodPlane
+                        MessageBeep GameOver
+                        GameOverPlane
+                        ClearControls 3: GetInp
+                        IF IsTopScore(UserPoints) THEN InputTopNameAndSaveIt
+                        UserLines = 0
+                        UserPoints = 0
+                        EXIT SUB
+        END SELECT
+
+END IF
+
+LOOP
+
+END SUB
+
+SUB Echo (Text$)
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+Break = Right
+
+
+IF Break = 0 THEN Break = 80
+ecr = 1
+FOR i = 1 TO INT(LEN(Text$) / (Break - TextBreak)) + 1
+LOCATE TextScale, TextBreak
+PRINT MID$(Text$, ecr, Break - TextBreak + 1);
+ecr = ecr + Break - TextBreak + 1
+TextScale = TextScale + 1
+NEXT
+END SUB
+
+SUB EnterLevel
+Register 5, 5, 11, 30, "Startland"
+Echo ""
+Echo " 1 - 100"
+Echo ""
+a$ = InputBox(0, 0, "", 3, 1)
+
+IF VAL(a$) < UserLevel AND UserPoints > 0 THEN
+Register 7, 7, 16, 60, "Land heruntersetzen"
+Echo ""
+Echo "Weil das Land heruntergesetzt wird muss das Spiel"
+Echo "neu gestartet werden."
+Echo ""
+Echo "Fortfahren?"
+ExitBox -1, -1
+ClearControls 0
+Control 14, 9, "Ja  "
+Control 14, 15, "Nein"
+GetInp
+IF Focus = "Nein" OR Keyb = "esc" THEN EXIT SUB
+UserPoints = 0: UserLines = 0
+END IF
+
+UserLevel = VAL(a$)
+IF UserLevel <= 0 THEN UserLevel = 1
+IF UserLevel > 100 THEN UserLevel = 100
+
+END SUB
+
+FUNCTION exist (p$)
+a = FREEFILE
+OPEN p$ FOR BINARY AS a
+IF LOF(a) = 0 THEN CLOSE a: KILL p$: exist = 0 ELSE CLOSE a: exist = -1
+END FUNCTION
+
+SUB ExitBox (x, y)
+IF x = -1 THEN x = EBox.left
+IF y = -1 THEN y = EBox.top
+LINE (x, y)-(x + 26, y + 20), 0, BF
+LINE (x, y)-(x + 26, y + 20), Fensterfarbe, B
+LINE (x + 1, y + 1)-(x + 25, y + 1), Schattenfarbe
+LINE (x + 1, y + 1)-(x + 1, y + 19), Schattenfarbe
+LINE (x, y + 21)-(x + 26, y + 21), Randfarbe
+LINE (x + 27, y + 21)-(x + 27, y), Randfarbe
+
+LINE (x + 2, y + 19)-(x + 24, y + 2), Fensterfarbe
+LINE (x + 3, y + 19)-(x + 25, y + 2), Schattenfarbe
+LINE (x + 2, y + 2)-(x + 24, y + 19), Fensterfarbe
+LINE (x + 3, y + 2)-(x + 25, y + 19), Schattenfarbe
+
+END SUB
+
+SUB Frame
+'Frame kann ausgefÅhrt werden, um ein Rahmen um das Fenster zu machen,
+'und dabei aber die Left- Top- usw.-Kordinaten zu behalten.
+'einzig die TextScale- und TextBreak- Koordinaten wechseln nach oben links.
+'-> Siehe auch die Sub "CLW".
+
+FrameWindow 0, 0, 638, 348, 0
+
+'EBox.left = 603: EBox.top = 321
+'Left = 2: Top = 2: Right = 79: Down = 24
+TextScale = 2: TextBreak = 2
+END SUB
+
+SUB FrameWindow (a, B, c, d, del)
+'Erstellt ein Fenster, ohne dabei die Umgebungsvariablen zu verÑndern
+'Wahlweise wird der Inhalt des Fensters gelîscht (del = 1), oder nicht.
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+IF del = 1 THEN LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+END SUB
+
+SUB GameOverPlane
+VIEW
+LINE (234, 109)-(421, 232), 0, BF
+
+LINE (234, 109)-(421, 232), 9, B
+LINE (233, 108)-(420, 231), 11, B
+
+LINE (272, 124)-(268, 120), 11
+LINE (268, 120)-(252, 120), 11
+LINE (252, 120)-(248, 124), 11
+LINE (248, 124)-(248, 156), 11
+LINE (248, 156)-(252, 160), 11
+LINE (252, 160)-(268, 160), 11
+LINE (272, 156)-(272, 144), 11
+LINE (268, 140)-(252, 140), 11
+LINE (252, 140)-(248, 144), 11
+LINE (272, 156)-(268, 160), 11
+LINE (268, 140)-(272, 140), 11
+LINE (272, 140)-(272, 144), 11
+LINE (296, 160)-(292, 156), 11
+LINE (292, 156)-(292, 144), 11
+LINE (292, 144)-(288, 140), 11
+LINE (288, 140)-(280, 140), 11
+LINE (280, 140)-(276, 144), 11
+LINE (276, 144)-(276, 156), 11
+LINE (276, 156)-(280, 160), 11
+LINE (280, 160)-(288, 160), 11
+LINE (288, 160)-(292, 156), 11
+LINE (300, 160)-(300, 140), 11
+LINE (300, 144)-(304, 140), 11
+LINE (304, 140)-(312, 140), 11
+LINE (312, 140)-(316, 144), 11
+LINE (316, 144)-(316, 160), 11
+LINE (316, 144)-(320, 140), 11
+LINE (328, 140)-(320, 140), 11
+LINE (328, 140)-(332, 144), 11
+LINE (332, 144)-(332, 160), 11
+LINE (344, 148)-(352, 148), 11
+LINE (352, 148)-(352, 144), 11
+LINE (352, 144)-(348, 140), 11
+LINE (348, 140)-(340, 140), 11
+LINE (340, 140)-(336, 144), 11
+LINE (336, 144)-(336, 156), 11
+LINE (336, 156)-(340, 160), 11
+LINE (340, 160)-(348, 160), 11
+LINE (348, 160)-(352, 156), 11
+LINE (344, 148)-(336, 148), 11
+LINE (329, 173)-(325, 177), 14
+LINE (325, 177)-(325, 209), 14
+LINE (325, 209)-(329, 213), 14
+LINE (329, 213)-(345, 213), 14
+LINE (345, 213)-(349, 209), 14
+LINE (349, 209)-(349, 177), 14
+LINE (349, 177)-(345, 173), 14
+LINE (345, 173)-(329, 173), 14
+LINE (353, 193)-(361, 213), 14
+LINE (361, 213)-(369, 193), 14
+LINE (381, 201)-(389, 201), 14
+LINE (389, 201)-(389, 197), 14
+LINE (389, 197)-(385, 193), 14
+LINE (385, 193)-(377, 193), 14
+LINE (377, 193)-(373, 197), 14
+LINE (373, 197)-(373, 209), 14
+LINE (373, 209)-(377, 213), 14
+LINE (377, 213)-(385, 213), 14
+LINE (385, 213)-(389, 209), 14
+LINE (381, 201)-(373, 201), 14
+LINE (393, 213)-(393, 193), 14
+LINE (393, 197)-(397, 193), 14
+LINE (397, 193)-(405, 193), 14
+LINE (405, 193)-(409, 197), 14
+LINE (273, 125)-(269, 121), 9
+LINE (269, 121)-(253, 121), 9
+LINE (253, 121)-(249, 125), 9
+LINE (249, 125)-(249, 157), 9
+LINE (249, 157)-(253, 161), 9
+LINE (253, 161)-(269, 161), 9
+LINE (273, 157)-(273, 145), 9
+LINE (269, 141)-(253, 141), 9
+LINE (253, 141)-(249, 145), 9
+LINE (273, 157)-(269, 161), 9
+LINE (269, 141)-(273, 141), 9
+LINE (273, 141)-(273, 145), 9
+LINE (297, 161)-(293, 157), 9
+LINE (293, 157)-(293, 145), 9
+LINE (293, 145)-(289, 141), 9
+LINE (289, 141)-(281, 141), 9
+LINE (281, 141)-(277, 145), 9
+LINE (277, 145)-(277, 157), 9
+LINE (277, 157)-(281, 161), 9
+LINE (281, 161)-(289, 161), 9
+LINE (289, 161)-(293, 157), 9
+LINE (301, 161)-(301, 141), 9
+LINE (301, 145)-(305, 141), 9
+LINE (305, 141)-(313, 141), 9
+LINE (313, 141)-(317, 145), 9
+LINE (317, 145)-(317, 161), 9
+LINE (317, 145)-(321, 141), 9
+LINE (329, 141)-(321, 141), 9
+LINE (329, 141)-(333, 145), 9
+LINE (333, 145)-(333, 161), 9
+LINE (345, 149)-(353, 149), 9
+LINE (353, 149)-(353, 145), 9
+LINE (353, 145)-(349, 141), 9
+LINE (349, 141)-(341, 141), 9
+LINE (341, 141)-(337, 145), 9
+LINE (337, 145)-(337, 157), 9
+LINE (337, 157)-(341, 161), 9
+LINE (341, 161)-(349, 161), 9
+LINE (349, 161)-(353, 157), 9
+LINE (345, 149)-(337, 149), 9
+LINE (328, 172)-(324, 176), 12
+LINE (324, 176)-(324, 208), 12
+LINE (324, 208)-(328, 212), 12
+LINE (328, 212)-(344, 212), 12
+LINE (344, 212)-(348, 208), 12
+LINE (348, 208)-(348, 176), 12
+LINE (348, 176)-(344, 172), 12
+LINE (344, 172)-(328, 172), 12
+LINE (352, 192)-(360, 212), 12
+LINE (360, 212)-(368, 192), 12
+LINE (380, 200)-(388, 200), 12
+LINE (388, 200)-(388, 196), 12
+LINE (388, 196)-(384, 192), 12
+LINE (384, 192)-(376, 192), 12
+LINE (376, 192)-(372, 196), 12
+LINE (372, 196)-(372, 208), 12
+LINE (372, 208)-(376, 212), 12
+LINE (376, 212)-(384, 212), 12
+LINE (384, 212)-(388, 208), 12
+LINE (380, 200)-(372, 200), 12
+LINE (392, 212)-(392, 192), 12
+LINE (392, 196)-(396, 192), 12
+LINE (396, 192)-(404, 192), 12
+LINE (404, 192)-(408, 196), 12
+END SUB
+
+FUNCTION Gerade (Zahl)
+IF Zahl / 2 - FIX(Zahl / 2) = 0 THEN Gerade = -1:  ELSE Gerade = 0
+END FUNCTION
+
+SUB GetInp
+DIM kbd AS STRING
+'Aktiviere das Control mit dem Fokus:
+SELECT CASE ControlConnect
+CASE 0: Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+END SELECT
+
+
+DO
+FOR i = 15 TO 19: KEY(i) ON: NEXT i
+IF InfoTime > 0 THEN
+TIMER ON
+ON TIMER(InfoTime) GOSUB TimeEreignis
+END IF
+  FOR i = 1 TO 4
+    AlteZeit(i) = TIMER
+  NEXT i
+WHILE INKEY$ = CHR$(13) OR INKEY$ = CHR$(27): WEND
+kbd = ""
+ WHILE kbd = ""
+  kbd = INKEY$
+  IF Helped THEN Keyb = "H": Helped = 0: EXIT SUB
+   FOR i = 1 TO 4
+     IF Stoppuhr(i) > 0 THEN
+       IF TIMER - AlteZeit(i) > Stoppuhr(i) THEN StoppUhrBeep (i): AlteZeit(i) = TIMER
+     END IF
+   NEXT i
+ WEND
+TIMER OFF: FOR i = 15 TO 19: KEY(i) OFF: NEXT i
+
+SELECT CASE kbd
+CASE CHR$(0) + "G": DO: a$ = Activ: LastControl: LOOP UNTIL a$ = Activ OR INKEY$ <> ""
+CASE CHR$(0) + "O": DO: a$ = Activ: NextControl: LOOP UNTIL a$ = Activ OR INKEY$ <> ""
+CASE CHR$(0) + "T": ShowInfo 'Manueller Q-Info-Abruf mit Shift+F1
+CASE CHR$(13)
+SELECT CASE ControlConnect
+CASE 0: Focus = MID$(ControlList(ControlNr), 5)
+CASE 1: Focus = MID$(MenuList(MenuNr), 5)
+END SELECT
+Keyb = kbd
+EXIT SUB
+CASE CHR$(9) 'Tab
+STATIC ch AS INTEGER
+
+Activate CHR$(0) 'Aktiviere ein Control, das gar nicht existiert, um alle
+                 'anderen zu deaktivieren.
+ControlConnect = ControlConnect + 1
+IF ControlConnect > 2 THEN ControlConnect = 0
+FOR i = 1 TO 3
+SELECT CASE ControlConnect
+CASE 0: IF ControlList(1) = "" THEN ControlConnect = 1
+CASE 1: IF Change(ch + 1) <> 0 THEN ControlConnect = 0: EXIT FOR
+        IF MenuList(1) = "" THEN ControlConnect = 2
+END SELECT
+NEXT i
+SELECT CASE ControlConnect
+CASE 0
+ch = ch + 1
+IF Change(ch) = 0 THEN ch = 0
+IF ch <> 0 THEN ControlNr = Change(ch)
+Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+END SELECT
+CASE CHR$(0) + "H", CHR$(0) + "K": LastControl
+CASE CHR$(0) + "P", CHR$(0) + "M": NextControl
+CASE CHR$(27)
+Keyb = "esc": EXIT SUB'Minimize
+END SELECT
+LOOP
+
+END SUB
+
+FUNCTION GetKey$
+
+WHILE INKEY$ <> "": WEND
+
+a$ = "": WHILE a$ = "": a$ = INKEY$: WEND
+
+SELECT CASE MID$(a$, 2)
+CASE "H": a$ = "up"
+CASE "P": a$ = "down"
+CASE "K": a$ = "left"
+CASE "M": a$ = "right"
+CASE "R": a$ = "insert"
+CASE "S": a$ = "delete"
+CASE "G": a$ = "home"
+CASE "O": a$ = "end"
+CASE "I": a$ = "pageup"
+CASE "Q": a$ = "pagedown"
+END SELECT
+
+SELECT CASE ASC(a$)
+CASE 27: a$ = "esc"
+CASE 9: a$ = "tab"
+END SELECT
+
+GetKey = a$
+Keyb = a$
+END FUNCTION
+
+'prÅft das Table-Datenfeld auf ganze Reihen, und lîscht diese
+'dann. Und verteilt die Punkte
+'
+'
+'
+SUB GetOnLines
+DIM l AS INTEGER, s AS INTEGER, z AS INTEGER
+DIM TempPoint AS INTEGER
+TempPoint = 0
+
+FOR l = LBOUND(Table, 2) TO UBOUND(Table, 2)
+IF IsItALine(l) THEN GOSUB DelThem
+NEXT
+
+TypeUserPoints
+EXIT SUB
+
+DelThem:
+MessageBeep LinieGeschafft
+TempPoint = TempPoint + 1
+
+'kleine Zeilen-Animation:
+FOR s = LBOUND(Table, 1) TO UBOUND(Table, 1)
+STable s, l, 0
+twait .01
+NEXT
+
+FOR s = LBOUND(Table, 1) TO UBOUND(Table, 1)
+STable s, l, InfoColor 'Table(s, z).Farbe
+twait .01
+NEXT
+
+
+'lîscht die Zeile l und schiebt die von oben nach l
+FOR z = l - 1 TO LBOUND(Table, 2) STEP -1
+
+
+FOR s = LBOUND(Table, 1) TO UBOUND(Table, 1)
+Table(s, z + 1).Farbe = Table(s, z).Farbe
+STable s, z + 1, Table(s, z).Farbe
+NEXT
+
+NEXT
+UserLines = UserLines + 1
+UserPoints = UserPoints + TempPoint * 10
+
+RETURN
+
+END SUB
+
+SUB GraphicView (a, B, c, d)
+'Diese Sub Ñndert die Umgebungsvariablen (Left, Top, usw.) fÅr einen bestimmt-
+'en Fenster-Bereich. Die darauffolgenden Grafikausgaben erfolgen in diesem
+'Bereich.
+'LINE (a, B)-(c, d), Randfarbe, B
+
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+TextBreak = Left
+TextScale = Top
+END SUB
+
+SUB HelpKey (Taste AS INTEGER)
+IF Taste = 11 THEN Taste = 30
+IF Taste = 12 THEN Taste = 31
+ON KEY(Taste) GOSUB Hilfeknopf
+KEY(Taste) ON
+END SUB
+
+SUB Info (Ctrl$, InfoText$)
+SHARED QuickInfos() AS STRING
+i = 0
+DO
+i = i + 1
+IF MID$(ControlList(i), 5) = Ctrl$ THEN EXIT DO
+IF MID$(MenuList(i), 5) = Ctrl$ THEN EXIT DO
+LOOP
+QuickInfos(i) = InfoText$
+END SUB
+
+FUNCTION InputBox$ (Zeilen, Spalten, Text$, Break, MaxDown)
+'Break=Zeilenumbruch | MaxDown=Maximale Zeilen
+IF Text$ = CHR$(0) THEN HidePasswordChar = -1: Text$ = ""
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Break = 0 OR Break > Right - Spalten THEN Break = Right - Spalten
+IF MaxDown = 0 THEN MaxDown = 24 - Zeilen
+TotalBreak = Break
+Texta$ = Text$: a$ = ""
+GOTO Deletefirst
+
+lesen:
+a$ = GetKey
+
+IF a$ = CHR$(13) THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "up" OR a$ = "down" OR a$ = "left" OR a$ = "right" OR a$ = "tab" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "esc" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = CHR$(8) THEN
+IF LEN(Texta$) > 0 THEN Texta$ = LEFT$(Texta$, LEN(Texta$) - 1)
+LINE (a, B)-(c + 1, d + 1), 0, BF
+a$ = ""
+END IF
+IF dwn > MaxDown THEN a$ = "": nocur = 1
+
+IF LEN(a$) = 1 THEN Texta$ = Texta$ + a$
+Break = LEN(Texta$) + 1
+
+Deletefirst:
+Break = LEN(Texta$) + 1
+dwn = INT(LEN(Texta$) / TotalBreak) + 1
+IF Break > TotalBreak THEN Break = TotalBreak: nocur = 1
+IF LEN(Texta$) < (INT(LEN(Texta$) / TotalBreak) + 1) * TotalBreak AND LEN(Texta$) > INT(LEN(Texta$) / TotalBreak) * TotalBreak THEN nocur = 0
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Texta$) / Break + 1)
+IF dwn > MaxDown AND MaxDown > 1 THEN EndZeile = EndZeile - 1
+IF Break = LEN(Texta$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+
+ecr = TotalBreak * -1 + 1
+FOR i = 1 TO INT(LEN(Texta$) / TotalBreak) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + TotalBreak
+IF HidePasswordChar THEN PRINT MID$(STRING$(LEN(Texta$), "*"), ecr, TotalBreak);  ELSE PRINT MID$(Texta$, ecr, TotalBreak);
+NEXT i
+ecr = 0
+
+IF nocur = 0 THEN LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14 - 14), InfoColor, BF ELSE nocur = 0
+GOTO lesen
+
+delcur:
+LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14 - 14), 0, BF
+
+END FUNCTION
+
+SUB InputTopNameAndSaveIt
+WHILE INKEY$ <> "": WEND
+VIEW
+Register 5, 5, 15, 60, "Gratuliere!"
+Echo ""
+Echo "Du bist einer der Besten. Wie heisst du?"
+Echo ""
+a$ = InputBox(0, 0, "", 40, 1)
+SaveScore UserPoints, a$
+ShowTopScore
+END SUB
+
+FUNCTION IsEmptyBox (Ordner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS InOrdner$, 11 AS link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+TimeLock (1)
+AlteZeit = TIMER
+DO
+GET 1
+IF RTRIM$(InOrdner$) = Ordner$ THEN IsEmptyBox = 0: TimeLock (0): EXIT FUNCTION
+
+IF TIMER - AlteZeit > .5 THEN TimeLock (1): AlteZeit = TIMER
+LOOP UNTIL Ltext(Dateiname$, 1) = ""
+TimeLock (0)
+
+IsEmptyBox = 1'Box ist leer
+END FUNCTION
+
+FUNCTION IsExist (Datei$, InOrdner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS Ordner$, 11 AS link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF Datei$ = RTRIM$(OsName$) AND InOrdner$ = RTRIM$(Ordner$) THEN IsExist = -1: EXIT FUNCTION
+IF Datei$ = RTRIM$(OsName$) AND InOrdner$ = "" THEN IsExist = -1: EXIT FUNCTION
+LOOP UNTIL Ltext$(Dateiname$, 1) = ""
+
+IsExist = 0
+
+
+END FUNCTION
+
+FUNCTION IsExistBox (Box$)
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = Box$ THEN IsExistBox = -1: EXIT FUNCTION
+LOOP UNTIL a$ = ""
+
+IsExistBox = 0
+END FUNCTION
+
+'prÅft, ob es eine Linie ist
+'
+'
+FUNCTION IsItALine% (row%)
+'SCREEN 0: STOP
+FOR i = LBOUND(Table, 1) TO UBOUND(Table, 1)
+IF Table(i, row%).Farbe = 0 THEN IsItALine = 0: EXIT FUNCTION
+NEXT
+
+IsItALine = -1
+
+END FUNCTION
+
+FUNCTION IsItOKToDraw (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+
+errorlevel = 0
+NurEinTest = -1
+DrawFigur FigurNr, x, y
+NurEinTest = 0
+
+IF errorlevel = 0 THEN IsItOKToDraw = -1 ELSE IsItOKToDraw = 0
+END FUNCTION
+
+FUNCTION IsTopScore% (Wert%)
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+
+FOR i = 1 TO MaxScore
+GET f%, , a$
+IF Wert% > VAL(a$) THEN IsTopScore = -1: EXIT FOR
+NEXT
+
+CLOSE f%
+
+END FUNCTION
+
+SUB LastControl
+SELECT CASE ControlConnect
+CASE 0
+ControlNr = ControlNr - 1
+IF ControlNr < 1 THEN ControlNr = 1
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1
+MenuNr = MenuNr - 1
+IF MenuNr < 1 THEN MenuNr = 1
+Activate MenuList(MenuNr)
+END SELECT
+END SUB
+
+FUNCTION LinkIt$
+CLOSE 1: OPEN "c:\laos\linkway.tmp" FOR RANDOM AS 1
+GET 1, 1, a$
+LinkIt = a$
+CLOSE 1
+END FUNCTION
+
+FUNCTION Ltext$ (Text$, ab) 'ab bedeutet: AB diesem Zeichen wird gemessen
+IF ab = 0 THEN ab = 1
+FOR i = ab TO LEN(Text$) - ab + 1
+IF MID$(Text$, i, 1) = " " OR ASC(MID$(Text$, i, 1)) = 0 THEN EXIT FOR
+NEXT i
+Ltext$ = MID$(Text$, ab, i - ab)
+END FUNCTION
+
+SUB MainMenu
+DIM musikeinaus(-1 TO 0) AS STRING, aActiv AS INTEGER
+musikeinaus(-1) = "ein"
+musikeinaus(0) = "aus"
+
+
+RANDOMIZE TIMER
+
+aActiv = 1
+
+DO
+50
+'Hintergrund:
+VIEW
+CLW
+HelpIndex = "Hauptmenu"
+LOCATE 2, 3: PRINT "F1 - Hilfe"
+
+ExitBox -1, -1
+ClearControls 3
+Register 8, 20, 16, 60, ""
+Control 9, 22, "Spiel starten"
+Control 11, 22, "Startland: " + LTRIM$(STR$(UserLevel))
+Control 13, 22, "Audio-Effekte: " + musikeinaus(SoundOn)
+Control 15, 22, "TopScore-Liste"
+ControlNr = aActiv
+GetInp
+IF Keyb = "esc" THEN CHAIN "c:\laos\run.bas"
+IF Keyb = "H" THEN 50
+aActiv = ControlNr
+
+SELECT CASE ControlNr
+CASE 1: ltmp% = UserLevel: PlayGame: IF UserPoints = 0 THEN UserLevel = ltmp%
+CASE 2: EnterLevel
+CASE 3: IF SoundOn = -1 THEN SoundOn = 0 ELSE SoundOn = -1: PLAY "mbt255l8o4cdegl6o5c."
+CASE 4: ShowTopScore
+END SELECT
+LOOP
+
+END SUB
+
+SUB MakeWindow (a, B, c, d)
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+
+END SUB
+
+SUB Menuact (Menu$)
+Zeilen = VAL(LEFT$(Menu$, 2))
+Spalten = VAL(MID$(Menu$, 3, 2))
+Caption$ = MID$(Menu$, 5)
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17
+c = (Spalten + LEN(Caption$)) * 8 - 5: d = (Zeilen + 1) * 14 - 11
+
+
+IF Activ = Menu$ THEN
+LOCATE Zeilen, Spalten: PRINT Caption$
+Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+END SUB
+
+SUB MenuBox (Zeilen, Spalten, Caption$)
+STATIC NMZeilen AS INTEGER, NMSpalten AS INTEGER
+IF NMZeilen = 0 THEN NMZeilen = Top
+IF NMSpalten = 0 THEN NMSpalten = Left
+IF Zeilen = 0 THEN Zeilen = NMZeilen
+IF Spalten = 0 THEN Spalten = NMSpalten
+
+IF Spalten + LEN(Caption$) - 1 > Right THEN Spalten = Left: Zeilen = Zeilen + 2
+IF Zeilen > Down THEN Zeilen = Top: Spalten = Left
+
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17: c = (Spalten + LEN(Caption$)) * 8 - 5
+d = (Zeilen + 1) * 14 - 11
+
+'Lîschen:
+LINE (a, B)-(c, d), 0, BF
+LOCATE Zeilen, Spalten: PRINT Caption$
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+'LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+'LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+
+NMSpalten = Spalten + LEN(Caption$) + 2
+NMZeilen = Zeilen
+IF NMSpalten > Right THEN NMSpalten = Left: NMZeilen = Zeilen + 2
+IF NMZeilen > Down THEN NMZeilen = Top: NMSpalten = Left
+
+'Menu eintragen:
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+a$ = Zeilen$ + Spalten$ + Caption$
+i = 0
+DO: i = i + 1
+IF MenuList(i) = a$ THEN EXIT SUB
+LOOP UNTIL MenuList(i) = ""
+MenuList(i) = a$
+MenuNr = 1
+
+
+TextScale = Zeilen + 2
+END SUB
+
+FUNCTION MenuInt$ (Item$, Trennzeichen$)
+Item$ = Item$ + Trennzeichen$
+DIM MenuItem(1 TO 256) AS STRING
+
+i = 0
+MaxLenth = 1
+DO
+i = i + 1
+MenuItem(i) = Trim(Item$, Trennzeichen$, i)
+
+IF LEN(MenuItem(i)) > 77 THEN MenuItem(i) = LEFT$(MenuItem(i), 77)
+IF LEN(MenuItem(i)) > MaxLenth THEN MaxLenth = LEN(MenuItem(i))
+
+LOOP WHILE MenuItem(i) <> ""
+
+'MaxLenth = MaxLenth + 2 '2 Spalten sind reserviert fÅr die Pfeile
+
+Zeilen = VAL(LEFT$(MenuList(MenuNr), 2)) + 1
+Spalten = VAL(MID$(MenuList(MenuNr), 3, 2))
+IF Spalten + MaxLenth > 79 THEN Spalten = 79 - MaxLenth
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + MaxLenth
+EndZeile = Zeilen + 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+Groesse = 4 + INT(((PMAP(c + 1, 0) - PMAP(a, 0) + 1) * (1) + 7) / 8) * 4 * (PMAP(d + 1, 1) - PMAP(B, 1) + 1)
+DIM Hg(Groesse)
+GET (a, B)-(c + 1, d + 1), Hg
+
+
+i = 0
+DO
+
+IF i < 1 THEN i = 1
+IF MenuItem(i) = "" THEN i = i - 1
+IF i < 1 THEN i = 1
+
+TextBox Zeilen, Spalten, MenuItem(i), MaxLenth
+
+SELECT CASE GetKey
+CASE "up", "left": i = i - 1
+CASE "down", "right": i = i + 1
+CASE CHR$(13): MenuInt$ = MenuItem(i): Choice = i: EXIT DO
+CASE "esc": MenuInt$ = "": Choice = 0: Keyb = "esc": EXIT DO
+CASE ELSE
+END SELECT
+LOOP
+
+ERASE MenuItem
+PUT (a, B), Hg, PSET
+
+END FUNCTION
+
+SUB MessageBeep (i%)
+'CONST RandAnschlag = 1, Anschlag = 2, LinieGeschafft = 3, GameOver = 4, Runter = 5, Pfeiltasten = 6, Drehen = 7, LandGeschafft = 8
+'
+IF NOT SoundOn THEN EXIT SUB
+
+WHILE INKEY$ <> "": WEND
+
+'unwichtige Ereignisse: (werden ignoriert, falls schon Sound lÑuft)
+IF PLAY(0) <= 1 THEN
+SELECT CASE i%
+CASE RandAnschlag: SOUND 500, 1: SOUND 1000, 1: SOUND 500, 1
+CASE Anschlag: SOUND 500, 1: SOUND 400, 1: SOUND 300, 2: SOUND 200, 1: SOUND 400, 2
+CASE Runter: SOUND 600, 1
+CASE Pfeiltasten: SOUND 1000, 1: SOUND 750, 1
+CASE Drehen: SOUND 1000, 1: SOUND 750, 1: SOUND 250, 1: SOUND 500, 1
+END SELECT
+END IF
+
+'wichtige: (werden abgespielt, sobald der Ton frei ist)
+SELECT CASE i%
+        CASE GameOver: PLAY "MBT255L4O3eaeO2aO3eaL2O3eL4aL8f#L4edc#O2bL2O2a"
+        CASE LinieGeschafft: PLAY "MBt255>l8c<c>c<"
+        CASE LandGeschafft: PLAY "MBT155L4O3cL8o4cO3bL16gaL8bO4cL4O3cL8aL8gL16eL16fL8gl16fL16eL8dl16O2bO3cL8dec"
+END SELECT
+
+END SUB
+
+FUNCTION NameOf$ (p$, laenge%)
+'Gibt den Namen des HighScore-Strings p$ zurÅck und schneidet ihn
+'auf die angegebene laenge%
+
+
+B$ = MID$(p$, INSTR(1, p$, ":") + 1)
+
+a = LEN(B$)
+IF a < laenge% THEN B$ = B$ + SPACE$(laenge% - a)
+NameOf$ = LEFT$(B$, laenge%)
+
+END FUNCTION
+
+SUB NextControl
+SELECT CASE ControlConnect
+CASE 0
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE ControlList(tC) <> ""
+tC = tC - 1
+
+ControlNr = ControlNr + 1
+IF ControlNr > tC THEN ControlNr = tC
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+CASE 1
+tC = 0: DO: tC = tC + 1: LOOP WHILE MenuList(tC) <> ""
+MenuNr = MenuNr + 1
+IF MenuNr > tC - 1 THEN MenuNr = tC - 1
+Activate MenuList(MenuNr)
+END SELECT
+END SUB
+
+'lÑsst das Spiel laufen.
+SUB PlayGame
+CLW
+DrawBackGround
+VIEW
+Register 3, 3, 9, 22, ""
+HelpIndex = ""
+
+TypeUserPoints
+VIEW (200, 25)-(440, 325), 0, InfoColor
+'horiz: 240 TPunkt: 24
+'vert:  300 TPunkt: 15
+PLAY "o4"
+IF UserPoints = 0 THEN
+        ERASE Table
+ELSE
+        DrawTable
+END IF
+
+DropDown
+
+IF Keyb = "esc" THEN EXIT SUB
+
+
+END SUB
+
+SUB ReDrawFigur (FigurNr AS INTEGER, x AS INTEGER, y AS INTEGER)
+Acol = YCol
+
+YCol = 0
+DrawFigur FigurNr, x, y
+
+YCol = Acol
+END SUB
+
+SUB Regedit (Eintrag$)
+'Schreibt einen beliebigen Ausdruck in die Registry. Existiert der Nenner
+'schon, so Åberschreibt Regedit den Bezeichner.
+'Eintrag$: ein Eintrag in Form von 'Nenner=Bezeichner'
+'-> Function RegItem
+
+'PrÅfen, ob Eintrag schon vorhanden:
+vh = 0
+f = FREEFILE
+OPEN "c:\laos\registry.bnk" FOR BINARY AS f: CLOSE f
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+
+lin = 0
+DO WHILE NOT EOF(f)
+lin = lin + 1
+LINE INPUT #f, a$
+IF UCASE$(LEFT$(a$, INSTR(Eintrag$, "="))) = UCASE$(LEFT$(Eintrag$, INSTR(Eintrag$, "="))) THEN vh = 1: EXIT DO
+LOOP
+
+f2 = FREEFILE
+CLOSE f
+
+IF vh = 1 THEN 'Eintrag ersetzen:
+
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+OPEN "c:\laos\registry.tmp" FOR OUTPUT AS f2
+FOR i = 1 TO lin - 1
+LINE INPUT #f, a$
+PRINT #f2, a$
+NEXT
+PRINT #f2, Eintrag$
+LINE INPUT #f, a$
+DO WHILE NOT EOF(f)
+LINE INPUT #f, a$
+PRINT #f2, a$
+LOOP
+CLOSE f, f2
+KILL "c:\laos\registry.bnk"
+NAME "c:\laos\registry.tmp" AS "c:\laos\registry.bnk"
+
+
+ELSE    'Eintrag hinzufÅgen:
+
+OPEN "c:\laos\registry.bnk" FOR APPEND AS f
+PRINT #f, Eintrag$
+CLOSE f
+
+END IF
+
+END SUB
+
+SUB Register (z, s, zu, su, Text$)
+IF z = 0 THEN z = 1
+IF s = 0 THEN s = 1
+IF zu = 0 THEN zu = 25
+IF su = 0 THEN su = 80
+IF s + LEN(Text$) > su - 1 AND su - s > 2 THEN Text$ = LEFT$(Text$, su - s - 3) + ".."
+a = s * 8 - 4
+B = z * 14 - 9
+c = su * 8 - 7
+d = zu * 14 - 7
+'Fenster:
+LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+LOCATE INT(B / 14) + 1, TextBreak
+PRINT Text$
+Break = su - 1
+IF z = 1 THEN LINE (0, 0)-(638, 0), Fensterfarbe: LINE (1, 1)-(637, 1), 0: LINE (1, 1)-(1, 347), 0
+EBox.left = c - 31: EBox.top = d - 24
+Left = s + 1: Top = z + 1: Right = su - 1: Down = zu - 1
+END SUB
+
+FUNCTION RegItem$ (Nenner$)
+'Gibt einen Eintrag aus der Registry zurÅck. Nenner$: Ein beliebiger Nenner,
+'welcher in der Registry vorhanden ist.
+'Siehe auch SUB Regedit
+
+vh = 0
+f = FREEFILE
+OPEN "c:\laos\registry.bnk" FOR BINARY AS f: CLOSE f
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+
+DO WHILE NOT EOF(f)
+LINE INPUT #f, a$
+IF UCASE$(LEFT$(a$, LEN(Nenner$))) = UCASE$(Nenner$) AND MID$(a$, LEN(Nenner$) + 1, 1) = "=" THEN vh = 1: EXIT DO
+LOOP
+CLOSE f
+
+IF vh = 0 THEN errorlevel = 1: EXIT FUNCTION
+
+RegItem = MID$(a$, LEN(Nenner$) + 2)
+END FUNCTION
+
+'
+SUB SaveScore (Wert AS INTEGER, Name$)
+
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+
+B$ = "0:N/A"
+FOR i = 1 TO MaxScore
+GET f%, i, a$
+IF a$ = "" THEN PUT f%, i, a$
+NEXT
+
+
+FOR i = 1 TO MaxScore
+
+GET f%, i, a$
+
+IF Wert > VAL(a$) THEN
+        'transportieren nach vorn:
+        FOR u = MaxScore TO i STEP -1
+                GET f%, u, a$
+                PUT f%, u + 1, a$
+        NEXT
+       
+        a$ = STR$(Wert) + ":" + Name$
+        PUT f%, i, a$
+        SeinPlatz = i
+        EXIT FOR
+END IF
+
+NEXT i
+
+CLOSE f%
+
+END SUB
+
+FUNCTION Score$ (Index)
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+GET f%, Index, a$
+IF a$ = "" THEN a$ = "0:Noch keiner"
+Score$ = a$
+CLOSE f%
+END FUNCTION
+
+FUNCTION SDate$ 'Function fÅr das System-Datum
+SELECT CASE Datumsformat
+CASE 0'TT.MM.JJJJ
+SDate$ = MID$(DATE$, 4, 2) + "." + LEFT$(DATE$, 2) + "." + RIGHT$(DATE$, 4)
+CASE 1'MM-TT-JJJJ
+SDate$ = DATE$
+CASE 2'JJJJ/MM/TT
+SDate$ = RIGHT$(DATE$, 4) + "/" + LEFT$(DATE$, 2) + "/" + MID$(DATE$, 4, 2)
+END SELECT
+END FUNCTION
+
+SUB ShowHelp (Index2$)
+DIM Index AS STRING, lc AS INTEGER
+CONST ctrControl = 1, ctrEcho = 2
+Index = Index2$ 'ByVal simulieren
+
+IF Index = "" THEN SOUND 1600, 1: EXIT SUB
+HilfeAnzeigen:
+
+RESTORE
+errorlevel = 0
+DO
+READ a$
+IF MID$(a$, 2) = Index AND LEFT$(a$, 1) = "™" THEN GOTO gefunden
+LOOP UNTIL a$ = "™Ende" OR errorlevel = 1
+Dialog "Das angeforderte Hilfethema konnte nicht gefunden werden."
+EXIT SUB
+
+gefunden:
+lc = 0
+errorlevel = 0
+SCREEN 9, , 1, 1
+VIEW
+COLOR Farbe
+IF errorlevel = 1 THEN Dialog "Hilfe kann nicht angezeigt werden wegen zuwenig EGA Adapterspeicher.": EXIT SUB
+
+CLW
+Register 0, 0, 0, 0, Index
+TextBreak = 4
+ClearControls 0
+ExitBox -1, -1
+Echo ""
+i% = 0
+DO
+READ a$
+i% = i% + 1
+
+IF a$ = "™Ende" OR LEFT$(a$, 1) = "™" OR errorlevel = 1 THEN EXIT DO
+
+IF LEFT$(a$, 1) = "|" THEN
+IF lc = ctrEcho THEN Echo ""
+Control 0, 0, MID$(a$, 2)
+lc = ctrControl
+ELSEIF LEFT$(a$, 1) = "#" THEN
+Pictures(1) = MID$(a$, 2)
+ShowPicture 1, 1
+ELSE
+Echo a$
+lc = ctrEcho
+END IF
+
+LOOP
+IF i% = 1 THEN Index = MID$(a$, 2): GOTO HilfeAnzeigen
+
+GetInp
+IF Keyb = "esc" THEN Helped = -1: SCREEN 9, , 0, 0: COLOR Farbe: ClearControls 0: EXIT SUB
+IF Focus <> "" THEN Index = Focus: GOTO HilfeAnzeigen
+
+END SUB
+
+SUB ShowInfo
+IF ControlConnect = 2 THEN EXIT SUB
+i = 0
+DO
+i = i + 1
+IF i > 500 THEN EXIT SUB
+IF MID$(ControlList(i), 5) = Activ OR MenuList(i) = Activ THEN EXIT DO
+LOOP
+IF QuickInfos(i) = "" THEN EXIT SUB
+IF Activ = MenuList(i) THEN
+z = VAL(LEFT$(MenuList(i), 2)) + 1 'Menu
+s = VAL(MID$(MenuList(i), 3, 2)) + 1
+ELSE
+z = VAL(LEFT$(ControlList(i), 2)) + 1 'Control
+s = VAL(MID$(ControlList(i), 3, 2)) + 1
+END IF
+IF s > Right THEN s = Right - LEN(MID$(ControlList(i), 5))
+
+IF z + INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1 > Down THEN z = Down - (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) + 1
+IF z < Top THEN
+s = Left + 1
+z = Down - INT(LEN(QuickInfos(i)) / (Right - s + 1))
+END IF
+
+REDIM BG(4 * 8 * 14 * 5) AS DOUBLE
+GET (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), BG
+LINE (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), 0, BF
+LINE (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), InfoFrame, B
+
+
+ecr = (Right - s + 1) * -1 + 1
+FOR a = 1 TO INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1
+LOCATE z + a - 1, s
+ecr = ecr + Right - s + 1
+COLOR InfoColor: PRINT MID$(QuickInfos(i), ecr, Right - s + 1)
+NEXT
+COLOR Farbe
+ecr = 0
+a = 0
+i = 0
+SLEEP
+PUT (s * 8 - 9, z * 14 - 15), BG, PSET
+END SUB
+
+SUB ShowNextFigur (fig AS INTEGER)
+VIEW
+'CONST z = 10, s = 3, zu = 16, su = 22
+CONST z = 3, s = 59, zu = 9, su = 77
+Register z, s, zu, su, ""
+VIEW (s * 8 - 4, z * 14 - 9)-(su * 8 - 7, zu * 14 - 7)
+
+NurVorschau = -1
+DrawFigur fig, 3, 3
+NurVorschau = 0
+VIEW (200, 25)-(440, 325)
+
+END SUB
+
+SUB ShowPicture (PNr, Streck)
+
+Bild$ = Pictures(PNr)
+IF Streck = 0 THEN Streck = 1
+
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+DIM Befehle(5) AS SINGLE
+xplus = 319
+yplus = 174
+
+CLOSE 1: OPEN Bild$ FOR BINARY AS 1
+
+i = 0
+DO
+
+FOR Nr = 0 TO 5
+GET 1, , Befehle(Nr)
+NEXT
+
+SELECT CASE CHR$(Befehle(0))
+CASE "p": PSET (Befehle(1) + xplus, Befehle(2) + yplus), Befehle(3)
+CASE "m": PAINT (Befehle(1) + xplus, Befehle(2) + yplus), Befehle(3), Befehle(4)
+CASE "l": LINE (Befehle(1) + xplus, Befehle(2) + yplus)-(Befehle(3) + xplus, Befehle(4) + yplus), Befehle(5)
+CASE "r": LINE (Befehle(1) + xplus, Befehle(2) + yplus)-(Befehle(3) + xplus, Befehle(4) + yplus), Befehle(5), B
+CASE "b": LINE (Befehle(1) + xplus, Befehle(2) + yplus)-(Befehle(3) + xplus, Befehle(4) + yplus), Befehle(5), BF
+CASE "k": CIRCLE (Befehle(1) + xplus, Befehle(2) + yplus), Befehle(3), Befehle(4), , , Befehle(5)
+CASE "x": FOR Nr = 0 TO 5
+                GET 1, , Bef2(Nr)
+          NEXT
+          CIRCLE (Befehle(1) + xplus, Befehle(2) + yplus), Befehle(3), Befehle(4), Bef2(1), Bef2(2), Befehle(5)
+
+END SELECT
+
+
+LOOP WHILE Befehle(0) <> 0
+
+END SUB
+
+SUB ShowTopScore
+CLW
+Register 0, 0, 0, 0, "Die besten 10 Spieler..."
+Echo ""
+
+FOR i = 1 TO MaxScore
+
+IF i = SeinPlatz THEN
+        COLOR InfoColor
+        Echo SPACE$(3) + " " + NameOf(Score$(i), 60) + STR$(VAL(Score$(i)))
+
+ELSE
+        COLOR Farbe
+        Echo SPACE$(5) + NameOf(Score$(i), 60) + STR$(VAL(Score$(i)))
+END IF
+
+Echo ""
+NEXT
+
+ClearControls 3
+Control 0, 37, "  OK  "
+SeinPlatz = 0
+GetInp
+END SUB
+
+SUB STable (x%, y%, Farbe%)
+'VIEW (200, 25)-(440, 325), 0, InfoColor
+'horiz: 240 TPunkt: 24
+'vert:  300 TPunkt: 15
+
+
+IF NurVorschau THEN
+LINE (24 * x% - 24, 15 * y% - 14)-(24 * x%, 15 * y%), InfoColor, BF
+
+LINE (24 * x% - 23, 15 * y% - 13)-(24 * x% - 1, 15 * y% - 1), 0, B
+LINE (24 * x% - 22, 15 * y% - 2)-(24 * x% - 2, 15 * y% - 2), Schattenfarbe, B
+LINE (24 * x% - 2, 15 * y% - 2)-(24 * x% - 2, 15 * y% - 12), Schattenfarbe, B
+
+EXIT SUB
+END IF
+
+IF NurEinTest THEN
+
+IF y% = LBOUND(Table, 2) THEN IF Table(x%, y% + 1).Farbe > 0 THEN IF Farbe% > 0 THEN errorlevel = ErrGameOver: EXIT SUB
+IF y% < LBOUND(Table, 2) THEN errorlevel = 0: EXIT SUB
+IF x% > UBOUND(Table, 1) THEN errorlevel = ErrRand
+IF x% < LBOUND(Table, 1) THEN errorlevel = ErrRand
+IF Table(x%, y%).Farbe > 0 AND errorlevel = 0 THEN errorlevel = ErrAngestossen
+
+
+ELSEIF NOT NurEinTest THEN
+
+Table(x%, y%).Farbe = Farbe%
+
+LINE (24 * x% - 24, 15 * y% - 14)-(24 * x%, 15 * y%), Farbe%, BF
+
+IF Farbe% > 0 THEN
+        LINE (24 * x% - 23, 15 * y% - 13)-(24 * x% - 1, 15 * y% - 1), 0, B
+
+        LINE (24 * x% - 22, 15 * y% - 2)-(24 * x% - 2, 15 * y% - 2), Schattenfarbe, B
+        LINE (24 * x% - 2, 15 * y% - 2)-(24 * x% - 2, 15 * y% - 12), Schattenfarbe, B
+END IF
+
+END IF 'NOT NurEinTest
+
+END SUB
+
+SUB StoppUhrBeep (Uhr)
+SELECT CASE Uhr
+CASE 1: TimeLock (1)
+CASE 2: SCREEN , , , 1: COLOR , 0
+a$ = "": DO: a$ = INKEY$: LOOP WHILE a$ = ""
+SCREEN , , , 0: COLOR Farbe, Hintergrundfarbe
+END SELECT
+END SUB
+
+SUB Switchdrive (lw$)
+IF LCASE$(lw$) = "c" THEN SHELL "c:": CHDIR "\laos": EXIT SUB
+
+ON ERROR GOTO fehlernext
+errorlevel = 0
+SHELL lw$ + ":"
+CHDIR "\laos"
+
+IF errorlevel = 0 THEN
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+   
+    i = 0
+    DO
+        i = i + 1
+        GET 1, i, a$
+    LOOP UNTIL LEFT$(a$, 1) = lw$ OR a$ = ""
+
+CLOSE 1: OPEN lw$ + ":\laos\medname.inf" FOR RANDOM AS 1
+GET 1, 1, DriveName
+IF DriveName = "" THEN DriveName = MID$(a$, 4)
+
+END IF
+
+END SUB
+
+SUB TextBox (Zeilen, Spalten, Text$, Break)
+'Break heisst hier: Hier wird der Text gebrochen (Zeilenumbruch)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Zeilen > 24 THEN Zeilen = 24
+
+IF Spalten + LEN(Text$) > Right AND Break = 0 THEN Break = Right - Spalten
+IF Break = 0 THEN Break = LEN(Text$)
+IF Break = 0 THEN Spalten = Spalten - 1: Break = 1
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Text$) / Break + 1)
+IF Break = LEN(Text$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+ecr = Break * -1 + 1
+FOR i = 1 TO INT(LEN(Text$) / Break) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + Break
+PRINT MID$(Text$, ecr, Break)
+NEXT i
+ecr = 0
+
+
+TextScale = EndZeile + 1
+END SUB
+
+SUB TimeLock (Status)
+STATIC On.too
+STATIC tm
+Radius = 14 * 2
+Farbe1 = 12
+Farbe2 = 9
+x = 319 - Radius
+y = 174 - Radius
+
+SELECT CASE Status
+CASE 1:
+'Falls es das erste Mal ist, muss der Hintergrund noch gespeichert werden:
+IF On.too = 0 THEN On.too = 1: GET (319 - Radius, 174 - Radius)-(319 + Radius, 174 + Radius), Hintergrund
+
+LINE (x + Radius - Radius, y + Radius - Radius)-(x + Radius + Radius, y + Radius + Radius), 0, BF
+IF tm = 1 THEN tm = 0 ELSE tm = 1
+
+IF tm = 0 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe1
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe1
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe1, , , .9
+PAINT (x + Radius + 1, y + Radius), Farbe1
+PAINT (x + Radius - 1, y + Radius), Farbe1
+END IF
+
+
+IF tm = 1 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe2
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe2
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe2, , , .9
+PAINT (x + Radius, y + Radius + 1), Farbe2
+PAINT (x + Radius, y + Radius - 1), Farbe2
+END IF
+CASE 0: IF On.too <> 0 THEN On.too = 0: PUT (319 - Radius, 174 - Radius), Hintergrund, PSET: Stoppuhr(1) = 0
+END SELECT
+END SUB
+
+FUNCTION Trim$ (Variable$, Trennzeichen$, a)
+
+mcr = 0
+gef = 0
+FOR i = 1 TO LEN(Variable$)
+mcr = mcr + 1
+a$ = MID$(Variable$, mcr)
+IF LEFT$(a$, 1) = Trennzeichen$ THEN gef = gef + 1
+IF gef = a - 1 THEN EXIT FOR
+NEXT
+IF LEFT$(a$, 1) = Trennzeichen$ THEN a$ = MID$(a$, 2) ELSE a$ = a$
+
+mcr = 0
+FOR i = 1 TO LEN(a$)
+mcr = mcr + 1
+IF MID$(a$, mcr, 1) = Trennzeichen$ THEN a$ = LEFT$(a$, mcr - 1): EXIT FOR
+NEXT
+
+Trim$ = a$
+
+END FUNCTION
+
+'wartet die angegebene Zeit
+'
+'
+SUB twait (Zeit AS SINGLE)
+nz = TIMER + Zeit
+DO: LOOP WHILE TIMER < nz
+END SUB
+
+SUB TypeUserPoints
+LOCATE 5, 5: PRINT "Linien: "; UserLines; " / "; LTRIM$(RTRIM$(STR$(UserLevel)));
+IF UserLevel < 100 THEN PRINT " "
+LOCATE 7, 5: PRINT "Punkte: "; UserPoints
+END SUB
+
+FUNCTION UserKey$
+
+a$ = INKEY$
+
+SELECT CASE MID$(a$, 2)
+CASE "H": a$ = "up"
+CASE "P": a$ = "down"
+CASE "K": a$ = "left"
+CASE "M": a$ = "right"
+CASE "R": a$ = "insert"
+CASE "S": a$ = "delete"
+CASE "G": a$ = "home"
+CASE "O": a$ = "end"
+CASE "I": a$ = "pageup"
+CASE "Q": a$ = "pagedown"
+END SELECT
+IF LEN(a$) = 1 THEN
+SELECT CASE ASC(a$)
+CASE 27: a$ = "esc"
+CASE 9: a$ = "tab"
+END SELECT
+END IF
+
+UserKey$ = a$
+END FUNCTION
+
+SUB VeryGoodPlane
+'Falls der Spieler sehr gut war, kann folgendes angezeigt werden:
+VIEW
+'Zeichnen der Nachtlandschaft:
+LINE (0, 0)-(639, 349), 1, BF
+CIRCLE (550, 87), 23, 14, , , .7391304
+PAINT (550, 87), 14, 14
+CIRCLE (513, 87), 41, 1, , , .4878049
+PAINT (535, 86), 1, 1
+LINE (1, 214)-(99, 213), 8
+LINE (99, 213)-(195, 214), 8
+LINE (195, 214)-(285, 213), 8
+LINE (285, 213)-(393, 216), 8
+LINE (393, 216)-(508, 218), 8
+LINE (508, 218)-(639, 224), 8
+LINE (639, 224)-(639, 349), 8
+LINE (639, 349)-(0, 349), 8
+LINE (1, 349)-(0, 214), 8
+PAINT (116, 289), 8, 8
+LINE (360, 333)-(392, 331), 6
+LINE (392, 331)-(414, 332), 6
+LINE (414, 332)-(468, 336), 6
+LINE (468, 336)-(559, 336), 6
+LINE (559, 336)-(585, 336), 6
+LINE (373, 318)-(401, 317), 6
+LINE (401, 317)-(429, 317), 6
+LINE (429, 317)-(447, 318), 6
+LINE (447, 318)-(456, 319), 6
+LINE (456, 319)-(538, 319), 6
+LINE (391, 297)-(570, 301), 6
+LINE (570, 301)-(585, 299), 6
+LINE (423, 272)-(498, 273), 6
+LINE (498, 273)-(592, 272), 6
+LINE (451, 244)-(569, 240), 6
+LINE (569, 240)-(603, 243), 6
+LINE (474, 260)-(555, 259), 6
+LINE (369, 325)-(388, 315), 6
+LINE (388, 315)-(392, 303), 6
+LINE (427, 275)-(434, 268), 6
+LINE (434, 268)-(447, 259), 6
+LINE (447, 259)-(456, 246), 6
+LINE (417, 289)-(472, 287), 6
+LINE (536, 289)-(578, 289), 6
+LINE (119, 161)-(236, 236), 6, BF
+LINE (114, 165)-(180, 115), 6
+LINE (180, 115)-(240, 163), 6
+PAINT (181, 149), 6, 6
+LINE (132, 189)-(166, 236), 8, BF
+LINE (174, 190)-(226, 215), 8, B
+LINE (174, 190)-(201, 215), 8, B
+PAINT (186, 201), 14, 8
+PAINT (219, 203), 14, 8
+LINE (182, 214)-(182, 214), 8
+LINE (182, 214)-(183, 213), 8
+LINE (183, 213)-(184, 212), 8
+LINE (184, 212)-(184, 211), 8
+LINE (184, 211)-(186, 211), 8
+LINE (186, 211)-(186, 210), 8
+LINE (186, 210)-(186, 209), 8
+LINE (186, 209)-(185, 208), 8
+LINE (185, 208)-(185, 207), 8
+LINE (185, 207)-(185, 206), 8
+LINE (185, 206)-(185, 205), 8
+LINE (185, 205)-(184, 205), 8
+LINE (184, 205)-(184, 204), 8
+LINE (184, 204)-(184, 203), 8
+LINE (184, 203)-(184, 202), 8
+LINE (184, 202)-(184, 201), 8
+LINE (184, 201)-(184, 200), 8
+LINE (184, 200)-(184, 199), 8
+LINE (184, 199)-(184, 198), 8
+LINE (184, 198)-(185, 197), 8
+LINE (185, 197)-(186, 197), 8
+LINE (186, 197)-(187, 197), 8
+LINE (187, 197)-(188, 197), 8
+LINE (188, 197)-(189, 197), 8
+LINE (189, 197)-(190, 197), 8
+LINE (190, 197)-(191, 197), 8
+LINE (191, 197)-(192, 197), 8
+LINE (192, 197)-(192, 198), 8
+LINE (192, 198)-(192, 199), 8
+LINE (192, 199)-(192, 200), 8
+LINE (192, 200)-(192, 201), 8
+LINE (192, 201)-(192, 202), 8
+LINE (192, 202)-(192, 203), 8
+LINE (192, 203)-(192, 204), 8
+LINE (192, 204)-(192, 205), 8
+LINE (192, 205)-(192, 206), 8
+LINE (192, 206)-(192, 207), 8
+LINE (192, 207)-(191, 207), 8
+LINE (191, 207)-(191, 208), 8
+LINE (191, 208)-(190, 208), 8
+LINE (190, 208)-(190, 209), 8
+LINE (190, 209)-(191, 209), 8
+LINE (191, 209)-(191, 210), 8
+LINE (191, 210)-(191, 211), 8
+LINE (191, 211)-(191, 212), 8
+LINE (191, 212)-(192, 213), 8
+LINE (192, 213)-(192, 214), 8
+LINE (192, 214)-(193, 214), 8
+LINE (193, 214)-(193, 215), 8
+LINE (193, 215)-(192, 215), 8
+LINE (186, 211)-(191, 211), 8
+PAINT (189, 213), 8, 8
+PAINT (189, 203), 3, 8
+LINE (138, 213)-(141, 214), 7
+CIRCLE (179, 141), 9, 8, , , .8888889
+PAINT (178, 140), 8, 8
+LINE (180, 168)-(192, 166), 8
+LINE (192, 166)-(192, 169), 8
+LINE (192, 169)-(180, 170), 8
+LINE (180, 170)-(180, 169), 8
+LINE (161, 174)-(173, 172), 8
+LINE (173, 172)-(173, 175), 8
+LINE (173, 175)-(161, 176), 8
+LINE (161, 176)-(161, 175), 8
+LINE (207, 176)-(219, 174), 8
+LINE (219, 174)-(219, 177), 8
+LINE (219, 177)-(207, 178), 8
+LINE (207, 178)-(207, 177), 8
+LINE (206, 226)-(218, 224), 8
+LINE (218, 224)-(218, 227), 8
+LINE (218, 227)-(206, 228), 8
+LINE (206, 228)-(206, 227), 8
+LINE (198, 172)-(210, 170), 8
+LINE (210, 170)-(210, 173), 8
+LINE (210, 173)-(198, 174), 8
+LINE (198, 174)-(198, 173), 8
+LINE (184, 176)-(196, 174), 8
+LINE (196, 174)-(196, 177), 8
+LINE (196, 177)-(184, 178), 8
+LINE (184, 178)-(184, 177), 8
+LINE (175, 172)-(187, 170), 8
+LINE (187, 170)-(187, 173), 8
+LINE (187, 173)-(175, 174), 8
+LINE (175, 174)-(175, 173), 8
+LINE (191, 175)-(190, 178), 8
+LINE (212, 177)-(213, 176), 8
+LINE (204, 173)-(204, 171), 8
+PSET (148.9518, 241.4363), 7
+PSET (158.2507, 241.0158), 7
+PSET (143.6775, 248.8818), 7
+PSET (162.999, 248.9372), 7
+PSET (146.8818, 247.6775), 7
+PSET (140.9021, 251.382), 7
+PSET (159.2748, 257.541), 7
+PSET (149.9372, 252.4974), 7
+PSET (142.7252, 258.541), 7
+PSET (158.442, 258.9206), 7
+PSET (164.1756, 251.382), 7
+PSET (154.6542, 255.1242), 7
+PSET (149.5026, 259.0628), 7
+PSET (164.2258, 258.4197), 7
+PSET (158.6775, 259.1182), 7
+PSET (144.0979, 263.382), 7
+PSET (162.5026, 262.0628), 7
+PSET (154.004, 267.1256), 7
+PSET (159.4579, 262.6309), 7
+PSET (171.4363, 263.0482), 7
+PSET (170.382, 266.9021), 7
+PSET (160.3226, 266.5002), 7
+PSET (148.0158, 267.7493), 7
+PSET (152.9206, 268.558), 7
+PSET (157.782, 268.908), 7
+PSET (160.782, 270.908), 7
+PSET (166.8096, 267.8516), 7
+PSET (167.2637, 264.1404), 7
+PSET (159.0089, 271.1882), 7
+PSET (162.618, 272.9021), 7
+PSET (165.9283, 270.6887), 7
+PSET (164.6871, 273.9754), 7
+PSET (165.618, 271.0979), 7
+PSET (169.9372, 272.4974), 7
+PSET (170.9206, 272.558), 7
+PSET (170.092, 271.782), 7
+PSET (169.5858, 267.5858), 7
+PSET (169.9372, 270.001), 7
+PSET (169.7215, 275.9819), 7
+PSET (172.8516, 271.1903), 7
+PSET (178.6309, 270.4579), 7
+PSET (182.5637, 270.0482), 7
+PSET (180, 278), 7
+PSET (183.9635, 277.7526), 7
+PSET (188.9206, 272.558), 7
+PSET (177.9283, 281.6887), 7
+PSET (176.618, 278.0979), 7
+PSET (176.9842, 277.2507), 7
+PSET (175.4142, 282.4142), 7
+PSET (176.5002, 277.6774), 7
+PSET (176.442, 269.0794), 7
+PSET (176.9635, 278.2474), 7
+PSET (179.7943, 281.8355), 7
+PSET (192.3458, 270.1242), 7
+PSET (188.9283, 280.6887), 7
+PSET (188, 280), 7
+PSET (191.5002, 279.3226), 7
+PSET (186.0365, 281.7526), 7
+PSET (190.9206, 276.442), 7
+PSET (189.2785, 277.0181), 7
+PSET (186.218, 280.092), 7
+PSET (191.7943, 281.8355), 7
+PSET (193.1903, 278.8516), 7
+PSET (195.9206, 282.558), 7
+PSET (193.442, 278.0794), 7
+PSET (197.3748, 277.0354), 7
+PSET (196.1242, 284.6542), 7
+PSET (195.0482, 281.5637), 7
+PSET (200.8118, 276.0089), 7
+PSET (199.7493, 286.9842), 7
+PSET (203.6887, 284.0717), 7
+PSET (203.382, 282.9021), 7
+PSET (204.4363, 283.9518), 7
+PSET (204.6775, 284.8818), 7
+PSET (202.3113, 281.0717), 7
+PSET (201.1182, 280.6775), 7
+PSET (210.8596, 281.2637), 7
+PSET (210.8516, 281.1903), 7
+PSET (214.7742, 279.4197), 7
+PSET (215.001, 286.0628), 7
+PSET (220.9037, 286.8726), 7
+PSET (219.4516, 289.1606), 7
+PSET (221.782, 282.092), 7
+PSET (217.7742, 287.5803), 7
+PSET (217.7252, 285.541), 7
+PSET (221.1484, 280.1903), 7
+PSET (218.8118, 287.9911), 7
+PSET (223.9372, 285.4974), 7
+PSET (236.3691, 277.5421), 7
+PSET (234.4998, 285.3226), 7
+PSET (233.0841, 286.7382), 7
+PSET (239.564, 282.184), 7
+PSET (235.1404, 281.2637), 7
+PSET (229.6871, 286.9754), 7
+PSET (230.2785, 281.0181), 7
+PSET (232.5002, 282.3226), 7
+PSET (228.9635, 283.7526), 7
+PSET (227.7526, 280.9635), 7
+PSET (226.4579, 284.3691), 7
+PSET (232.3691, 284.4579), 7
+PSET (239.9518, 279.5637), 7
+PSET (239.3691, 282.5421), 7
+PSET (241.9842, 282.2507), 7
+PSET (242.3458, 280.8758), 7
+PSET (245.5803, 282.7742), 7
+PSET (245.8744, 284.9961), 7
+PSET (243.6309, 288.4579), 7
+PSET (246.9372, 285.4974), 7
+PSET (246.5421, 281.6309), 7
+PSET (245.8244, 282.382), 7
+PSET (248.541, 284.2748), 7
+PSET (248.9635, 281.2474), 7
+PSET (249, 286), 7
+PSET (251.9842, 284.2507), 7
+PSET (250.908, 285.218), 7
+PSET (248.3458, 289.1242), 7
+PSET (251.001, 286.0628), 7
+PSET (252.5637, 286.0482), 7
+PSET (255.8818, 287.3225), 7
+PSET (257.618, 288.8244), 7
+PSET (259.2507, 289.0158), 7
+PSET (262.7943, 289.8355), 7
+PSET (265.7191, 289.4725), 7
+PSET (263.927, 284.4948), 7
+PSET (264.9372, 289.5026), 7
+PSET (259.436, 288.184), 7
+PSET (259.1958, 291.2361), 7
+PSET (262.001, 291.0628), 7
+PSET (265.3226, 294.5002), 7
+PSET (263.4974, 294.9372), 7
+PSET (265.3226, 291.4998), 7
+PSET (265.9518, 293.5637), 7
+PSET (269.0181, 296.7215), 7
+PSET (269.001, 294.0628), 7
+PSET (268.0089, 297.8118), 7
+PSET (270.6871, 295.0246), 7
+PSET (271.1404, 297.7363), 7
+PSET (270.5421, 297.6309), 7
+PSET (271.1903, 298.1484), 7
+PSET (274.0365, 299.2474), 7
+PSET (271.6774, 304.5002), 7
+PSET (277.9206, 303.558), 7
+PSET (273.3691, 303.5421), 7
+PSET (269.558, 308.9206), 7
+PSET (278.0628, 304.4974), 7
+PSET (254.1756, 302.382), 7
+PSET (253.8516, 301.1903), 7
+PSET (258.4363, 297.0482), 7
+PSET (260.9961, 295.8744), 7
+PSET (263.218, 293.092), 7
+PSET (257.3113, 295.0717), 7
+PSET (260, 295), 7
+PSET (259.9646, 291.3748), 7
+PSET (254.6252, 292.9646), 7
+PSET (256.442, 289.9206), 7
+PSET (245.1756, 282.382), 7
+PSET (240.4197, 285.2258), 7
+PSET (238.541, 281.7252), 7
+PSET (223.442, 286.9206), 7
+PSET (217.0158, 285.2507), 7
+PSET (219.0628, 283.001), 7
+PSET (226.6775, 286.8818), 7
+PSET (243.9021, 286.382), 7
+PSET (244.1256, 288.0039), 7
+PSET (246.2474, 293.0365), 7
+PSET (253.9021, 292.382), 7
+PSET (250.4579, 288.3691), 7
+PSET (248.8516, 293.8097), 7
+PSET (244.0709, 291.2505), 7
+PSET (245.6489, 288.7639), 7
+PSET (236.8118, 283.9911), 7
+PSET (232.8758, 281.3458), 7
+PSET (230.0089, 283.8118), 7
+PSET (231.7363, 282.1404), 7
+PSET (226.0039, 285.8744), 7
+PSET (233.7363, 285.1404), 7
+PSET (246.8516, 292.8097), 7
+PSET (245.3458, 293.1242), 7
+PSET (246.999, 288.9372), 7
+PSET (240.8596, 290.7363), 7
+PSET (239.1484, 289.1903), 7
+PSET (235.4998, 286.3226), 7
+PSET (232.3691, 285.4579), 7
+PSET (232.5026, 288.9372), 7
+PSET (242.9206, 291.442), 7
+PSET (242.908, 291.218), 7
+PSET (239.0979, 292.618), 7
+PSET (238.1404, 290.7363), 7
+PSET (245.6774, 298.5002), 7
+PSET (245.1256, 296.9961), 7
+PSET (244.3748, 300.9646), 7
+PSET (244.9842, 303.2507), 7
+PSET (245.8516, 303.8096), 7
+PSET (248, 310), 7
+PSET (249.442, 307.0794), 7
+PSET (263.1903, 306.1484), 7
+PSET (265.5013, 303.0316), 7
+PSET (261.002, 306.8744), 7
+PSET (268.5803, 304.2258), 7
+PSET (257.382, 302.9021), 7
+PSET (259.9911, 302.1882), 7
+PSET (282.9372, 299.001), 7
+PSET (284.1404, 303.7363), 7
+PSET (268.9372, 304.001), 7
+PSET (264.908, 307.782), 7
+PSET (246.8244, 309.618), 7
+PSET (248.5026, 307.0628), 7
+PSET (270.218, 307.092), 7
+PSET (263.2474, 307.0365), 7
+PSET (267.9283, 307.3113), 7
+PSET (273.5803, 307.7742), 7
+PSET (262.2638, 312.8596), 7
+PSET (260.5858, 309.5858), 7
+PSET (266.4363, 312.9518), 7
+PSET (255.618, 309.0979), 7
+PSET (245.782, 311.908), 7
+PSET (244.0717, 309.3113), 7
+PSET (243.6887, 312.0717), 7
+PSET (268.382, 311.8244), 7
+PSET (278.0628, 311.001), 7
+PSET (278.3764, 309.0178), 7
+PSET (281.9507, 313.6257), 7
+PSET (260.2057, 311.1645), 7
+PSET (241.5002, 311.6774), 7
+PSET (242.4516, 316.1606), 7
+PSET (236.0079, 312.7488), 7
+PSET (248.3458, 316.1241), 7
+PSET (265.8097, 315.1484), 7
+PSET (267.1882, 315.0089), 7
+PSET (265.073, 313.4948), 7
+PSET (263.4948, 318.927), 7
+PSET (276.0717, 318.6887), 7
+PSET (271.0079, 316.7488), 7
+PSET (276.5886, 313.329), 7
+PSET (274.0979, 318.618), 7
+PSET (263.459, 319.2748), 7
+PSET (243.001, 321.0628), 7
+PSET (245.8596, 321.7363), 7
+PSET (243.6252, 320.0354), 7
+PSET (244.9646, 321.6252), 7
+PSET (236.8758, 323.6542), 7
+PSET (234.6774, 323.5002), 7
+PSET (239.9646, 321.6252), 7
+PSET (237.0628, 320.001), 7
+PSET (234.4503, 318.918), 7
+PSET (236.1274, 325.9037), 7
+PSET (232.3691, 320.5421), 7
+PSET (240.3748, 320.0354), 7
+PSET (301.1182, 326.6775), 7
+PSET (302.2748, 324.459), 7
+PSET (262.558, 327.9206), 7
+PSET (241.8097, 325.1484), 7
+PSET (243.0717, 324.3113), 7
+PSET (252.8355, 325.2057), 7
+PSET (259.001, 325.9372), 7
+PSET (263.8596, 326.7363), 7
+PSET (260.4363, 326.9518), 7
+PSET (268.0628, 323.5026), 7
+PSET (272.8097, 323.1484), 7
+PSET (270.9206, 324.558), 7
+PSET (276.999, 323.9372), 7
+PSET (277.8596, 324.7363), 7
+PSET (278.5497, 320.918), 7
+PSET (274.2969, 327.6193), 7
+PSET (307.9021, 324.618), 7
+PSET (291.1882, 321.0089), 7
+PSET (266.8516, 322.8096), 7
+PSET (260.3748, 322.9646), 7
+PSET (253.0628, 321.4974), 7
+PSET (254.8758, 319.3458), 7
+PSET (265.0158, 320.2507), 7
+PSET (267.8355, 318.7943), 7
+PSET (261.6775, 313.1182), 7
+PSET (255.0482, 311.4363), 7
+PSET (256.1645, 310.7943), 7
+PSET (258.4579, 311.6309), 7
+PSET (254.4197, 316.2258), 7
+PSET (258.7943, 315.8355), 7
+PSET (266.0979, 307.382), 7
+PSET (274.8758, 314.6542), 7
+PSET (282.5858, 321.4142), 7
+PSET (280.436, 321.816), 7
+PSET (281.0841, 317.2618), 7
+PSET (282.8744, 312.996), 7
+PSET (286.6775, 311.1182), 7
+PSET (298.1882, 318.0089), 7
+PSET (296.9646, 321.6252), 7
+PSET (283.5858, 314.5858), 7
+PSET (280.1484, 313.1904), 7
+PSET (290.6542, 326.1241), 7
+PSET (292.4998, 329.3226), 7
+PSET (288.9283, 323.3113), 7
+PSET (288.9372, 321.001), 7
+PSET (290.8244, 327.382), 7
+PSET (292.7943, 328.1645), 7
+PSET (294.4579, 328.6309), 7
+PSET (298.9372, 331.5026), 7
+PSET (300.8596, 338.7363), 7
+PSET (302.2361, 335.6489), 7
+PSET (301.9159, 335.2618), 7
+PSET (287.4363, 336.9518), 7
+PSET (246.9842, 331.7493), 7
+PSET (240.9635, 333.7526), 7
+PSET (239.2474, 333.9635), 7
+PSET (240.7488, 336.9921), 7
+PSET (243.1433, 329.6227), 7
+PSET (237.9021, 332.382), 7
+PSET (234.6252, 334.9646), 7
+PSET (235.5002, 331.6774), 7
+PSET (226.0717, 332.3113), 7
+PSET (221.1484, 336.8096), 7
+PSET (220.7639, 331.1958), 7
+PSET (224.2483, 338.3083), 7
+PSET (236.0717, 329.3113), 7
+PSET (238.0354, 330.3748), 7
+PSET (241.908, 330.782), 7
+PSET (243.7215, 329.0181), 7
+PSET (235.382, 325.0979), 7
+PSET (225.2637, 329.1404), 7
+PSET (221.3225, 334.8818), 7
+PSET (221.7493, 332.0158), 7
+PSET (222.7493, 337.9842), 7
+PSET (226.1404, 336.7363), 7
+PSET (253.9754, 338.3129), 7
+PSET (271.3129, 339.9754), 7
+PSET (284.0039, 337.8744), 7
+PSET (288.218, 336.092), 7
+PSET (270.4363, 334.0482), 7
+PSET (255.3748, 335.9646), 7
+PSET (251.2057, 332.1645), 7
+PSET (261.618, 333.1756), 7
+PSET (265.5002, 330.6774), 7
+PSET (269.908, 333.782), 7
+PSET (287.218, 331.092), 7
+PSET (287.3226, 334.5002), 7
+PSET (277.9911, 333.8118), 7
+PSET (254.6871, 332.0246), 7
+PSET (261.5421, 336.3691), 7
+PSET (266.618, 338.1756), 7
+PSET (271.7493, 340.9842), 7
+PSET (277.0158, 334.7493), 7
+PSET (276.5484, 338.1606), 7
+PSET (277.184, 338.564), 7
+PSET (279.558, 332.0794), 7
+PSET (282.908, 334.218), 7
+PSET (289.4142, 335.5858), 7
+PSET (289.908, 335.218), 7
+PSET (289.1182, 339.6775), 7
+PSET (299.442, 341.0794), 7
+PSET (296.9372, 342.001), 7
+PSET (253.7742, 344.5803), 7
+PSET (240.0628, 339.5026), 7
+PSET (232.8244, 341.618), 7
+PSET (225.8744, 341.996), 7
+PSET (229.0794, 340.442), 7
+PSET (242.782, 340.908), 7
+PSET (241.7742, 337.4197), 7
+PSET (227.9911, 338.1882), 7
+PSET (218.6775, 339.8818), 7
+PSET (216.2507, 337.0158), 7
+PSET (216.2258, 337.4197), 7
+PSET (218.671, 337.4114), 7
+PSET (211.557, 336.9638), 7
+PSET (215, 342), 7
+PSET (218.0821, 342.5497), 7
+PSET (218.9921, 339.7488), 7
+PSET (211.4197, 341.2258), 7
+PSET (217.1756, 339.382), 7
+PSET (240.3748, 342.9646), 7
+PSET (253.5637, 340.0482), 7
+PSET (266.1756, 340.382), 7
+PSET (267.218, 342.908), 7
+PSET (277.3748, 338.0354), 7
+PSET (279.8118, 338.0089), 7
+PSET (287.1645, 341.7943), 7
+PSET (288.3458, 339.8759), 7
+PSET (291.4974, 339.0628), 7
+PSET (284.782, 337.092), 7
+PSET (280.0979, 337.382), 7
+PSET (289.9372, 336.001), 7
+PSET (296.0365, 336.2474), 7
+PSET (297.6252, 340.9646), 7
+PSET (298.1484, 340.8096), 7
+PSET (301.2748, 341.541), 7
+PSET (301.7362, 339.1404), 7
+PSET (304.6887, 343.0717), 7
+PSET (306.9961, 343.1256), 7
+PSET (307.5497, 346.082), 7
+PSET (304.8744, 339.002), 7
+PSET (302.558, 342.9206), 7
+PSET (295.0354, 337.3748), 7
+PSET (291.1484, 332.1904), 7
+PSET (293.5002, 332.3226), 7
+PSET (289.2474, 329.0365), 7
+PSET (287.9372, 324.001), 7
+PSET (287.1242, 319.3458), 7
+PSET (287.782, 318.908), 7
+PSET (284.0354, 316.3748), 7
+PSET (283.0794, 314.442), 7
+PSET (284.5002, 311.6774), 7
+PSET (283.541, 310.7252), 7
+PSET (283.4725, 308.2809), 7
+PSET (284.2483, 308.6917), 7
+PSET (288.9206, 316.558), 7
+PSET (291.1882, 319.0089), 7
+PSET (293.6887, 325.0717), 7
+PSET (295.7526, 328.0365), 7
+PSET (294.5637, 329.0482), 7
+PSET (297.9961, 334.1256), 7
+PSET (294.0794, 335.442), 7
+PSET (294.6775, 332.1182), 7
+PSET (280.6774, 326.5002), 7
+PSET (277.1242, 321.6542), 7
+PSET (274.9819, 316.2785), 7
+PSET (272.7362, 313.1404), 7
+PSET (269.999, 310.9372), 7
+PSET (262.8118, 309.9911), 7
+PSET (255.442, 302.0794), 7
+PSET (252.999, 298.9372), 7
+PSET (248.0246, 297.6871), 7
+PSET (252.6887, 298.0717), 7
+PSET (254.998, 296.8744), 7
+PSET (247.1257, 296.0052), 7
+PSET (252.9842, 295.2507), 7
+PSET (252.5803, 295.2258), 7
+PSET (252.618, 296.9021), 7
+PSET (253.2507, 302.9842), 7
+PSET (253.382, 302.0979), 7
+PSET (250.2809, 302.5275), 7
+PSET (252.073, 307.5052), 7
+PSET (224.0089, 283.1882), 7
+PSET (217.1242, 281.3458), 7
+PSET (215.9518, 281.5637), 7
+PSET (213.9961, 280.8744), 7
+PSET (210.092, 282.782), 7
+PSET (208.8758, 278.3458), 7
+PSET (208.8744, 281.9961), 7
+PSET (205.4363, 283.9518), 7
+PSET (204.3225, 282.1182), 7
+PSET (206.3691, 283.5421), 7
+PSET (201.0963, 284.1274), 7
+PSET (204.3743, 281.0493), 7
+PSET (209.6231, 288.8246), 7
+PSET (201.3226, 280.2591), 7
+PSET (206.4921, 290.8115), 7
+PSET (209.0365, 283.2474), 7
+PSET (214.6887, 284.9283), 7
+PSET (212.4987, 282.0316), 7
+PSET (209, 286), 7
+PSET (213.3767, 291.9882), 7
+PSET (210.9676, 291.6453), 7
+PSET (213.5647, 280.0266), 7
+PSET (205.382, 283.8244), 7
+PSET (200.3691, 282.5421), 7
+PSET (194.2748, 285.541), 7
+PSET (189.3226, 280.4998), 7
+PSET (187.4363, 280.0482), 7
+PSET (186, 283), 7
+PSET (186.8818, 277.3225), 7
+PSET (181.0089, 275.8118), 7
+PSET (182.9372, 272.001), 7
+PSET (183.0365, 271.2474), 7
+PSET (181.4363, 273.9518), 7
+PSET (177.7526, 270.9635), 7
+PSET (179.3773, 272.1433), 7
+PSET (179.3773, 267.8567), 7
+PSET (180.999, 272.9372), 7
+PSET (180.2637, 273.1404), 7
+PSET (181.3113, 278.0717), 7
+PSET (183, 281), 7
+PSET (186.998, 277.1256), 7
+PSET (180.2474, 278.9635), 7
+PSET (177.6252, 277.0354), 7
+PSET (174, 278), 7
+PSET (171.0089, 277.8118), 7
+PSET (171.8096, 276.8516), 7
+PSET (166.4998, 274.6774), 7
+PSET (167.541, 275.2748), 7
+PSET (161.0089, 271.8118), 7
+PSET (161.9518, 269.5637), 7
+PSET (159.9754, 268.3129), 7
+PSET (150.2785, 265.0181), 7
+PSET (150.382, 260.0979), 7
+PSET (148.1645, 260.7943), 7
+PSET (151.8355, 256.7943), 7
+PSET (145.1645, 253.7943), 7
+PSET (142.4197, 248.7742), 7
+PSET (142.382, 250.1756), 7
+PSET (142, 244), 7
+PSET (140.1645, 242.2057), 7
+PSET (145.4974, 241.9372), 7
+PSET (154.9021, 246.618), 7
+PSET (153.4197, 247.7742), 7
+PSET (158.782, 251.092), 7
+PSET (158.9372, 257.999), 7
+PSET (161.8284, 253.1716), 7
+PSET (162.443, 253.9638), 7
+PSET (155.0365, 253.7526), 7
+PSET (153.004, 249.1256), 7
+PSET (156.1756, 248.618), 7
+PSET (156.7943, 242.1645), 7
+PSET (153.6489, 240.7639), 7
+PSET (152.6917, 246.2483), 7
+PSET (157.7526, 242.9635), 7
+PSET (148.6774, 240.5002), 7
+PSET (139.3691, 240.4579), 7
+PSET (147.9646, 240.3748), 7
+PSET (154.2507, 241.9842), 7
+PSET (154.9372, 242.999), 7
+PSET (151.1958, 242.2361), 7
+PSET (152.4503, 244.0821), 7
+PSET (157.8596, 240.2637), 7
+PSET (156.4197, 241.2258), 7
+PSET (158.004, 240.1256), 7
+PSET (158.3113, 240.0717), 7
+PSET (161.9206, 240.442), 7
+PSET (161.9021, 242.382), 7
+PSET (160.9518, 245.5637), 7
+PSET (157.0089, 248.1882), 7
+PSET (158.6871, 250.9754), 7
+PSET (158.6309, 249.5421), 7
+PSET (159.459, 255.2748), 7
+PSET (161.6309, 259.4579), 7
+PSET (162.3748, 257.0354), 7
+PSET (160.1484, 257.1903), 7
+PSET (154.0482, 255.5637), 7
+PSET (152.1182, 252.6775), 7
+PSET (150.0158, 249.2507), 7
+PSET (149.001, 247.0628), 7
+PSET (147.0963, 246.1274), 7
+PSET (154.9292, 247.7495), 7
+PSET (149.4998, 249.3226), 7
+PSET (152.5026, 254.9372), 7
+PSET (158.0717, 259.3113), 7
+PSET (161.8596, 262.2637), 7
+PSET (222.4974, 292.9372), 7
+PSET (235.9646, 290.6252), 7
+PSET (223.5858, 291.4142), 7
+PSET (229.0717, 290.3113), 7
+PSET (231.7526, 291.0365), 7
+PSET (231.382, 290.8244), 7
+PSET (225.1484, 289.1903), 7
+PSET (244.5421, 306.3691), 7
+LINE (27, 224)-(33, 206), 4
+LINE (33, 206)-(33, 200), 4
+LINE (45, 224)-(44, 201), 4
+LINE (44, 201)-(33, 200), 4
+LINE (27, 223)-(45, 224), 4
+PAINT (37, 216), 4, 4
+LINE (40, 201)-(62, 208), 2
+LINE (62, 208)-(72, 206), 2
+LINE (72, 206)-(52, 193), 2
+LINE (52, 193)-(66, 193), 2
+LINE (66, 193)-(45, 178), 2
+LINE (45, 178)-(63, 181), 2
+LINE (63, 181)-(52, 166), 2
+LINE (52, 166)-(61, 168), 2
+LINE (61, 168)-(50, 152), 2
+LINE (50, 152)-(31, 163), 2
+LINE (31, 163)-(41, 164), 2
+LINE (41, 164)-(20, 178), 2
+LINE (20, 178)-(33, 176), 2
+LINE (33, 176)-(10, 189), 2
+LINE (10, 189)-(28, 188), 2
+LINE (28, 188)-(18, 195), 2
+LINE (18, 195)-(3, 200), 2
+LINE (3, 200)-(16, 201), 2
+LINE (16, 201)-(35, 201), 2
+LINE (35, 201)-(44, 202), 2
+PAINT (40, 189), 2, 2
+LINE (84.68904, 231.7238)-(83.55223, 212.7842), 4
+LINE (83.55223, 212.7842)-(85.10515, 206.9886), 4
+LINE (67.30237, 227.065)-(74.22115, 205.1075), 4
+LINE (74.22115, 205.1075)-(85.10515, 206.9886), 4
+LINE (84.94788, 230.7578)-(67.30237, 227.065), 4
+PAINT (77.10034, 221.4082), 4, 4
+LINE (78.08484, 206.1428)-(55.02274, 207.2103), 2
+LINE (55.02274, 207.2103)-(45.88113, 202.6902), 2
+LINE (45.88113, 202.6902)-(68.56429, 195.3096), 2
+LINE (68.56429, 195.3096)-(55.04132, 191.6861), 2
+LINE (55.04132, 191.6861)-(79.20805, 182.6324), 2
+LINE (79.20805, 182.6324)-(61.04492, 180.8715), 2
+LINE (61.04492, 180.8715)-(75.5524, 169.2296), 2
+LINE (75.5524, 169.2296)-(66.34143, 168.8321), 2
+LINE (66.34143, 168.8321)-(81.10771, 156.2243), 2
+LINE (81.10771, 156.2243)-(96.6133, 171.767), 2
+LINE (96.6133, 171.767)-(86.69522, 170.1447), 2
+LINE (86.69522, 170.1447)-(103.3562, 189.1029), 2
+LINE (103.3562, 189.1029)-(91.3168, 183.8064), 2
+LINE (91.3168, 183.8064)-(110.1684, 202.3163), 2
+LINE (110.1684, 202.3163)-(93.0406, 196.6916), 2
+LINE (93.0406, 196.6916)-(100.8881, 206.0413), 2
+LINE (100.8881, 206.0413)-(114.0829, 214.7532), 2
+LINE (114.0829, 214.7532)-(101.2671, 212.3545), 2
+LINE (101.2671, 212.3545)-(82.91447, 207.4369), 2
+LINE (82.91447, 207.4369)-(73.96233, 206.0735), 2
+PAINT (81.19067, 194.5517), 2, 2
+LINE (94, 208)-(87, 202), 8
+LINE (69, 202)-(81, 198), 8
+LINE (74, 190)-(82, 186), 8
+LINE (90, 195)-(86, 191), 8
+LINE (86, 184)-(84, 178), 8
+LINE (69, 176)-(77, 175), 8
+LINE (97, 184)-(88, 179), 8
+LINE (81, 167)-(82, 163), 8
+LINE (82, 163)-(76, 164), 8
+LINE (83, 175)-(83, 171), 8
+LINE (88, 168)-(86, 166), 8
+LINE (20, 199)-(35, 197), 8
+LINE (56, 203)-(47, 197), 8
+LINE (42, 192)-(35, 186), 8
+LINE (35, 183)-(39, 181), 8
+LINE (47, 186)-(42, 175), 8
+LINE (33, 172)-(40, 170), 8
+LINE (51, 174)-(47, 170), 8
+LINE (43, 159)-(48, 158), 8
+
+
+'fireball:
+'LINE (0, 0)-(640, 200), 0, BF
+x = 320
+y = 200
+x1 = 300
+y1 = 200
+'x2 = 150
+'y2 = 200
+
+COLOR 14
+
+FOR i = 210 TO 130 STEP -1
+x = x + 1
+y = y - 1
+x1 = x1 - 1
+y1 = y1 - 2
+x2 = x2 + 2
+y2 = y2 - 1
+PSET (x, y)
+PSET (x, y - 1)
+PSET (x + 1, y - 1)
+SOUND i, .5
+PRESET (x, y), 1
+PRESET (x, y - 1), 1
+PRESET (x + 1, y - 1), 1
+
+PSET (x1, y1)
+PSET (x1, y1 - 1)
+PSET (x1 + 1, y1 - 1)
+SOUND i, .5
+PRESET (x1, y1), 1
+PRESET (x1, y1 - 1), 1
+PRESET (x1 + 1, y1 - 1), 1
+
+NEXT
+
+SOUND 80, 1
+SOUND 37, 2
+FOR i = 1 TO 20
+LINE (x, y)-(x + RND * 30, y + RND * 10), RND * 15
+LINE (x, y)-(x - RND * 30, y - RND * 10), RND * 15
+LINE (x, y)-(x - RND * 20, y + RND * 20), RND * 15
+LINE (x, y)-(x + RND * 20, y - RND * 20), RND * 15
+NEXT
+
+SOUND 80, 1
+SOUND 37, 2
+FOR i = 1 TO 20
+LINE (x1, y1)-(x1 + RND * 30, y1 + RND * 10), RND * 15
+LINE (x1, y1)-(x1 - RND * 30, y1 - RND * 10), RND * 15
+LINE (x1, y1)-(x1 - RND * 20, y1 + RND * 20), RND * 15
+LINE (x1, y1)-(x1 + RND * 20, y1 - RND * 20), RND * 15
+NEXT
+
+PLAY "p30"
+SOUND 40, 2
+FOR z = 1 TO 40
+CIRCLE (x, y), z, RND * 15
+CIRCLE (x1, y1), z, RND * 15
+NEXT
+'PLAY "mb mn t200 egg efgg. bbaag. e. d. efdefg. aabb >c.c"
+
+FOR z = 1 TO 50
+CIRCLE (x, y), z, 1
+CIRCLE (x1, y1), z, 1
+NEXT
+
+
+
+
+y3 = y
+y4 = y1
+y5 = y2
+
+
+FOR i = 1 TO 15
+LINE (x, y)-(x, y + 2), 14
+LINE (x1, y1)-(x1, y1 + 2), 14
+PLAY "p60"
+y = y + RND * 10
+y1 = y1 + RND * 10
+y2 = y2 + RND * 10
+NEXT
+
+y = y3 + 2
+y1 = y4 + 2
+y2 = y5 + 2
+FOR i = 1 TO 20
+y = y + 2
+y1 = y1 + 5
+y2 = y2 + 3
+LINE (x, y3)-(x, y), 1
+LINE (x1, y4)-(x1, y1), 1
+PLAY "p30"
+NEXT
+'CLW
+COLOR Farbe
+END SUB
+

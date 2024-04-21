@@ -1,0 +1,59 @@
+
+
+                               ®¯®¯®¯®¯®¯®¯®¯
+                               NPS Integrated
+                               ®¯®¯®¯®¯®¯®¯®¯
+
+
+           Das Passwortschutz- und Verschlsselungssystem von LaOS
+         ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+NPS ist ein sehr fortschrittliches Passwort- und Verschlsselungssystem.
+Seit LaOS 4 ist es ein fester Bestandteil von LaOS.
+
+
+1. Daten verschlsseln
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Sie k”nnen folgende Daten verschlsseln:
+-Dokumente
+
+Im Programmverwalter verbirgt sich das Menu "”ffnen/verschliessen".
+Dort k”nnen Sie eine Datei verschlsseln oder auch wieder entschlsseln.
+
+
+2. Das Passwort
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Sie k”nnen jedem Dokument ein eigenes Passwort zuweisen.
+Ich empfehle Ihnen aber, ein und dasselbe Passwort fr jede verschlsselte
+Datei zu verwenden. Das Passwort muss in der Gross- und Kleinschreibung
+bercksichtigt werden. Falls Sie es vergessen, mssen Sie die Datei l”schen.
+(Da sich das Passwort selbst entschlsselt, wenn es richtig ist, gibt es keine
+M”glichkeit, es durch Hacken herauszufinden. Es ist nirgends in seiner Form
+gespeichert.)
+
+
+3. Verwendungsm”glichkeiten
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Sie k”nnen Inhalte, die Sie vor fremden Blicken schtzen m”chten, verschlss-
+eln. (z.B. geheime Dokumente)
+
+
+4. Verschlsselte Dokumente laden
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Verschlsselte Dokumente k”nnen Sie nicht im Dokumentserver selbst laden. Um
+solche Dokumente anzeigen zu k”nnen, mssen Sie sie im LaOS-Hauptmenu an-
+w„hlen, wodurch es automatisch im richtigen Programm geladen wird. Falls Sie
+es trotzdem versuchen, im Dokumentserver selbst zu laden, werden Sie ein
+komisches Ergebnis vorfinden.
+
+
+5. Verschlsselte Dokumente „ndern
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Mssen Sie ein verschlsseltes Dokument „ndern, und Sie speichern es wieder,
+so ist es nicht mehr verschlsselt. Sie mssen es erneut verschlsseln.

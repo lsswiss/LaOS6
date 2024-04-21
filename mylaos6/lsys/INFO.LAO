@@ -1,0 +1,1733 @@
+'LaOS Version 2.00 Copyright (C) Urs Langmeier, New BCO
+'Sommer 1998, Version ohne ScreenText und ohne Run-on-command
+
+'spÑter aktualisiert auf Version 3 (Alle Laufwerke)
+
+'Sommer 1999, (C) Urs Langmeier
+
+'LaOS 5, 12.2.2000:
+'------------------
+'Wahlweise Detaillierte Systeminfo (F2)
+'Mit Speicherschema
+
+'Entwickelt unter QBASIC von Urs Langmeier
+'Idee & Programmierung: Urs Langmeier
+
+'Alle Urheber- und Leistungsschutzrechte vorbehalten. Der Code darf nicht un-
+'erlaubt kopiert oder verkauft werden.
+
+
+DECLARE SUB xPalConvert (a$)
+DECLARE SUB ClearControls (Connect!)
+DECLARE SUB RegEdit (Eintrag$)
+DECLARE FUNCTION RegItem$ (Nenner$)
+DECLARE FUNCTION GetProgramsGreat# ()
+DECLARE FUNCTION GreatOfPal# (Datei$)
+DECLARE FUNCTION GetTotalGreat# ()
+DECLARE FUNCTION GreatOfBox# (box$)
+DECLARE SUB Main ()
+DECLARE SUB Dialog (Caption$)
+DECLARE SUB PartFormat (Text$, Setting$)
+DECLARE SUB echo (Txt$)
+DECLARE FUNCTION Format$ (FormatString AS STRING)
+DECLARE SUB PieSliece (a%, B%, Radius!, StartPz%, EndePz%, Titel$, col%, randcol%)
+DECLARE FUNCTION CoSinus! (Winkel!)
+DECLARE FUNCTION Sinus! (Winkel!)
+DECLARE FUNCTION MB$ (Wert AS DOUBLE)
+DECLARE SUB Register (z!, s!, zu!, su!, Text$)
+DECLARE SUB SetCombo (Nr!, Wert AS STRING)
+DECLARE FUNCTION Combo$ (Nr!)
+DECLARE SUB EraseCombo ()
+DECLARE FUNCTION GetCombo$ (Nr!)
+DECLARE SUB Graphicview (a!, B!, c!, d!)
+DECLARE FUNCTION Drivelist$ (Nr!)
+DECLARE SUB Switchdrive (lw$)
+DECLARE FUNCTION DosFile$ (Kennung$, InOrdner$)
+DECLARE SUB ExitBox (x!, y!)
+DECLARE FUNCTION exist! (p$)
+DECLARE SUB TextBox (Zeilen!, Spalten!, Text$, break!)
+DECLARE SUB FrameWindow (a!, B!, c!, d!, del!)
+DECLARE SUB GetInp ()
+DECLARE SUB Control (Zeilen!, Spalten!, Text$)
+DECLARE SUB CLW ()
+DECLARE FUNCTION Gerade! (Zahl!)
+DECLARE FUNCTION IsExist! (Datei$, InOrdner$)
+DECLARE FUNCTION ComboBox$ (Nr!, z!, s!, zu!, su!)
+DECLARE FUNCTION IsEmptyBox! (Ordner$)
+DECLARE FUNCTION IsExistBox! (box$)
+DECLARE FUNCTION Trim$ (Variable$, Trennzeichen$, a!)
+DECLARE FUNCTION SDate$ ()
+DECLARE SUB TimeLock (Status!)
+DECLARE SUB StoppUhrBeep (Uhr!)
+DECLARE FUNCTION GetKey$ ()
+DECLARE SUB NextControl ()
+DECLARE SUB LastControl ()
+DECLARE SUB Activate (Ctrl$)
+DECLARE FUNCTION InputBox$ (Zeilen!, Spalten!, Text$, break!, MaxDown!)
+
+ON ERROR GOTO fehlernext
+
+SCREEN 9
+VIEW PRINT 1 TO 25
+DIM SHARED Hintergrund(456) AS LONG
+DIM SHARED Stoppuhr(1 TO 4) AS INTEGER '1 ist Reserviert!
+DIM SHARED AlteZeit(1 TO 4) AS LONG
+DIM SHARED TextScale AS INTEGER
+DIM SHARED TextBreak AS INTEGER
+DIM SHARED Activ AS STRING
+DIM SHARED ControlNr AS INTEGER
+DIM SHARED ControlList(4) AS STRING
+DIM SHARED break AS INTEGER
+DIM SHARED EBox.left AS INTEGER, EBox.top AS INTEGER
+DIM SHARED Left AS INTEGER, Top AS INTEGER, Right AS INTEGER, Down AS INTEGER
+DIM SHARED NextBreak AS INTEGER
+DIM SHARED ControlConnect AS INTEGER
+DIM SHARED Focus AS STRING
+DIM SHARED Keyb AS STRING
+DIM SHARED errorlevel AS INTEGER
+DIM SHARED Choice AS INTEGER
+DIM SHARED Pictures(4) AS STRING
+DIM SHARED ActivItem AS STRING, DriveName AS STRING
+
+FesteEinstellungen:
+WIDTH 80, 25
+
+Einstellungen:
+DIM SHARED Fensterfarbe AS INTEGER, Randfarbe AS INTEGER, Schattenfarbe AS INTEGER, Controlfarbe AS INTEGER
+DIM SHARED Symbolactiv AS INTEGER, SymbactStil AS INTEGER, SymbolFrame AS INTEGER, SymbolColor AS INTEGER
+DIM SHARED Hintergrundfarbe  AS INTEGER, Farbe AS INTEGER, IconVerticalSpace AS INTEGER
+DIM SHARED InfoTime AS INTEGER, InfoColor  AS INTEGER, InfoFrame AS INTEGER, Datumsformat AS INTEGER
+
+CLOSE 1: OPEN "c:\laos\config.lcg" FOR RANDOM AS 1
+GET 1, 1, Schema$
+
+DIM m(1 TO 15)
+
+IF Schema$ <> "" THEN
+
+IF LOF(1) <> 0 THEN
+CLOSE 1: OPEN "c:\laos\" + Schema$ + ".scl" FOR INPUT AS 1: LINE INPUT #1, a$
+FOR i = 1 TO 15
+INPUT #1, m(i)
+NEXT
+ELSE m(10) = 15: m(1) = 14
+END IF
+
+ELSE m(10) = 15: m(1) = 14
+END IF
+
+Fensterfarbe = m(1)'Fensterfarben
+Randfarbe = m(2)
+Schattenfarbe = m(3)
+Controlfarbe = m(4)  'SchaltflÑchenfarbe
+Symbolactiv = m(5) 'Umrahmungsfarbe des aktiven Symbols
+SymbactStil = m(6) 'Umrahmungs-Stil des aktivierten Symbols (-1=voll)
+
+SymbolFrame = m(7) 'Farbe des Symbolrahmens
+SymbolColor = m(8) 'Farbe des Symbolhintergrundes
+
+Hintergrundfarbe = m(9) 'Bildschirmfarben
+Farbe = m(10) '= Vordergrundfarbe
+
+IconVerticalSpace = m(11) 'Setzt den Vertikalen Standard-Abstand der Symbole
+                            'Auf Null gesetzt ist der Abstand genÅgend.
+InfoTime = m(12)'Setzt die zu verstreichende Zeit in Sekunden, bis die Quick-
+                  'Info erscheint. (0=Ausgeschaltet)
+InfoColor = m(13) 'Setzt die Farbe, in der der Quick-Info-Text erscheint.
+InfoFrame = m(14) 'Setzt die Farbe des Quick-Info-Rahmens.
+
+Datumsformat = m(15)
+
+ERASE m
+
+CONST Fe1 = 6, Fe2 = 4, Fe3 = 75, Fe4 = 20 'Startfensterkoordinaten
+Stoppuhr(2) = 60 '2.Stoppuhr: Bildschirmschoner
+
+
+VorStart:
+CLOSE
+VIEW
+COLOR Farbe, Hintergrundfarbe
+Switchdrive "c"
+CONST tmp = 3
+EraseCombo
+
+DIM SHARED ActiveMode AS STRING 'Aktives Speicherschema
+DIM SHARED FileSystemSize AS DOUBLE, ActualizeNow AS INTEGER, ProgramSize AS DOUBLE
+
+Programm:
+'Schreiben Sie hier Ihren persînlichen Code:
+DIM SHARED Fre$, Tot$, Detail%
+
+CONST PI = 3.141592654#
+
+CLW
+ExitBox 605, 6
+LOCATE 2, 3: PRINT "LaOS - Systeminfo"
+Control 5, 3, " Installierte Laufwerke "
+Control 5, 29, "       Speicher        "
+Control 5, 54, "        Dateien         "
+
+Detail% = VAL(RegItem("Systeminfo.Detailliert"))
+
+IF exist("c:\laos\space.exe") THEN
+SHELL "c:\laos\space.exe >c:\laos\space.tmp"
+f% = FREEFILE
+
+OPEN "c:\laos\space.tmp" FOR INPUT AS f%
+LINE INPUT #f%, Tot$
+LINE INPUT #f%, Fre$
+CLOSE f%
+END IF
+
+OnlyShow = 1
+GOSUB Activate
+OnlyShow = 0
+
+
+12
+    IF ActualizeNow THEN ActualizeNow = 0: Keyb = "": GOTO 14
+GetInp
+14
+IF Keyb <> CHR$(13) THEN OnlyShow = 1 ELSE OnlyShow = 0
+IF Keyb = "esc" THEN CHAIN "C:\LAOS\RUN.BAS"
+IF Keyb = CHR$(13) THEN
+
+IF ControlNr = 2 THEN
+    ActivItem = ActiveMode: ActiveMode = ComboBox(1, 23, 5, 23, 24)
+
+    IF ActivItem <> ActiveMode THEN OnlyShow = 1: Main: OnlyShow = 0
+ELSE
+    a$ = ComboBox(1, 8, 5, 23, 75)
+END IF
+
+IF Focus = " Installierte Laufwerke " AND Keyb = CHR$(13) AND Choice > 1 THEN
+errorlevel = 0
+CLOSE
+OPEN LTRIM$(LEFT$(a$, 3)) + "\laos\nul" FOR BINARY AS 1
+IF errorlevel = 0 THEN
+    SHELL LTRIM$(LEFT$(a$, 3)): CHDIR "\LAOS"
+
+SHELL "c:\laos\space.exe >c:\laos\space.tmp"
+f% = FREEFILE
+
+OPEN "c:\laos\space.tmp" FOR INPUT AS f%
+LINE INPUT #f%, Tot$
+LINE INPUT #f%, Fre$
+CLOSE f%
+LOCATE 2, 23: PRINT SPC(50); : LOCATE 2, 23: PRINT "(" + LTRIM$(MID$(a$, 6)) + ")"
+ActualizeNow = -1
+ELSE Dialog "Das Laufwerk ist nicht bereit. Legen Sie einen LaOS-Formatierten DatentrÑger ein, und prÅfen Sie, ob das Laufwerk angeschlossen ist.": ActualizeNow = -1
+END IF
+END IF
+GOTO 12
+END IF
+15
+GOSUB Activate
+
+CHAIN "C:\LAOS\RUN.BAS"
+Activate:
+Graphicview 18, 80, 620, 334
+EraseCombo
+
+SELECT CASE ControlNr
+CASE 3
+CLOSE 1: OPEN "\laos\DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+DIM ma AS STRING * 11, MB1 AS STRING * 11, m1 AS STRING * 32, m2 AS STRING * 32, m3 AS STRING * 16, m4 AS STRING * 10, m5 AS STRING * 5, mi AS STRING * 11
+ma = "DosFile:"
+MB1 = "Link:"
+mi = "Symbol:"
+m1 = "Dateiname:": m2 = "Ordner:": m3 = "Dateiart:": m4 = "Datum:": m5 = "Zeit:"
+IF Detail% THEN
+    SetCombo 1, ma + " " + MB1 + " " + mi + " " + m1 + " " + m2 + " " + m3 + " " + m4 + " " + m5 + " " + "Fileinfo:"
+ELSE
+    SetCombo 1, m1 + " " + m2 + " " + m3 + " " + m4 + " " + m5 + " " + "Fileinfo:"
+END IF
+az = TIMER
+TimeLock 1
+a = 0
+
+DO
+k$ = INKEY$
+IF k$ = CHR$(0) + "K" OR k$ = CHR$(0) + "H" THEN LastControl: RETURN 15
+IF k$ = CHR$(0) + "P" OR k$ = CHR$(0) + "M" THEN NextControl: RETURN 15
+
+a = a + 1
+IF TIMER - az > .5 THEN az = TIMER: TimeLock 1
+GET 1, a
+
+IF Detail% THEN
+
+IF RTRIM$(Link$) = "" THEN
+        SetCombo a + 1, Dateiname$ + " " + "-" + SPACE$(10) + " " + Symbol$ + " " + OSName$ + " " + Ordner$ + " " + Art$ + " " + Datum$ + " " + Zeit$ + " " + RTRIM$(FileInfo$)
+ELSE
+        SetCombo a + 1, Dateiname$ + " " + Link$ + " " + Symbol$ + " " + OSName$ + " " + Ordner$ + " " + Art$ + " " + Datum$ + " " + Zeit$ + " " + RTRIM$(FileInfo$)
+END IF
+ELSE
+        SetCombo a + 1, OSName$ + " " + Ordner$ + " " + Art$ + " " + Datum$ + " " + Zeit$ + " " + RTRIM$(FileInfo$)
+
+END IF
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+
+TimeLock 0
+SetCombo a + 1, ""
+a$ = ComboBox(1, 8, 5, 23, 75)
+
+CASE 2
+
+Main
+
+
+CASE 1
+SetCombo 1, " LW  Laufwerksbenennung"
+SetCombo 2, " C:  HeimattrÑger"
+i = 0
+DO
+k$ = INKEY$
+IF k$ = CHR$(0) + "K" OR k$ = CHR$(0) + "H" THEN LastControl: RETURN 15
+IF k$ = CHR$(0) + "P" OR k$ = CHR$(0) + "M" THEN NextControl: RETURN 15
+i = i + 1
+SetCombo i + 2, " " + UCASE$(Drivelist(i)) + ":  " + DriveName
+LOOP UNTIL Drivelist(i) = ""
+SetCombo i + 2, ""
+
+a$ = ComboBox(1, 8, 5, 23, 75)
+END SELECT
+RETURN 12
+
+
+CHAIN "C:\LAOS\RUN.BAS"
+
+
+fehlernext:
+SELECT CASE ERR
+CASE 7, 14: PRINT "Zuwenig Speicher. Kann ProgrammausfÅhrung nicht fortsetzen."
+RUN "C:\LAOS\RUN.BAS"
+'CASE ELSE: Dialog "Der Fehler" + STR$(ERR) + " ist aufgetreten."
+END SELECT
+errorlevel = 1
+RESUME NEXT
+
+SUB Activate (Ctrl$)
+SELECT CASE ControlConnect
+CASE 0 'Controls
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = Ctrl$
+IF a$ = "" THEN EXIT SUB
+'ControlNr = i
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+END SELECT
+END SUB
+
+SUB ClearControls (Connect)
+SELECT CASE Connect
+CASE 0: ControlNr = 0: ERASE ControlList
+CASE 3 'Alle lîschen
+ControlNr = 0: ERASE ControlList
+END SELECT
+
+END SUB
+
+SUB CLW
+'Fenster:
+LINE (2, 2)-(637, 347), 0, BF
+LINE (0, 0)-(638, 348), Fensterfarbe, B
+'Schatten:
+LINE (1, 1)-(637, 1), Schattenfarbe
+LINE (1, 1)-(1, 347), Schattenfarbe
+'Rand:
+LINE (639, 349)-(0, 349), Randfarbe
+LINE (639, 349)-(639, 0), Randfarbe
+
+TextScale = 2 '=Zeile
+TextBreak = 2 '=Spalte
+EBox.left = 603: EBox.top = 321
+Left = 2: Top = 2: Right = 79: Down = 24
+END SUB
+
+FUNCTION Combo$ (Nr)
+
+GET tmp, Nr, Combo$
+
+END FUNCTION
+
+FUNCTION ComboBox$ (Nr, z, s, zu, su)
+SHARED OnlyShow
+MaxItem% = 10000
+DIM Beginn AS INTEGER
+Beginn = 1
+IF z = 0 THEN z = Top
+IF s = 0 THEN s = Left
+IF zu = 0 THEN zu = Down
+IF su = 0 THEN su = Right
+
+MaxLenth = su - s + 1
+MaxDown = zu - z + 1
+
+
+a = s * 8 - 11
+B = z * 14 - 17
+c = su * 8 + 1
+d = zu * 14 + 1
+
+
+FrameWindow a, B, c, d, 0
+
+ItemPos = 1
+ItemPage = 1
+
+IF ActivItem <> "" THEN act$ = ActivItem: zrl = 1: GOTO aktivieren
+weiter2:
+
+DO
+
+ Standort = ItemPage * MaxDown - MaxDown + 1
+LOCATE z
+
+ FOR i = 0 TO MaxDown - 1
+  IF Standort + i <= MaxItem% THEN
+  Eintrag$ = MID$(Combo(Standort + i), Beginn, MaxLenth)
+  IF LEN(Eintrag$) < MaxLenth THEN Eintrag$ = Eintrag$ + SPACE$(MaxLenth - LEN(Eintrag$))
+  ELSE Eintrag$ = SPACE$(MaxLenth)
+  END IF
+
+   IF Standort + i = ItemPos THEN COLOR InfoColor ELSE COLOR Farbe
+   LOCATE , s: PRINT Eintrag$
+IF i = 0 THEN LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B ELSE LINE (s * 8 - 9, (z + i) * 14 - 14)-(su * 8, (z + i) * 14), 0, B
+
+ NEXT i
+
+i = ItemPos - Standort
+IF OnlyShow = 1 THEN EXIT FUNCTION
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), InfoFrame, B
+
+SELECT CASE GetKey
+CASE "up"
+ItemPos = ItemPos - 1
+IF ItemPos < Standort THEN ItemPage = ItemPage - 1
+CASE "down"
+IF ItemPos < MaxItem% THEN
+IF Combo(ItemPos + 1) <> "" THEN
+
+ItemPos = ItemPos + 1
+IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+END IF
+END IF
+CASE "f3"
+    GOTO weitersuchen
+CASE "^s"
+'Suchen:
+PCOPY 0, 1
+Register 8, 8, 14, 50, "Nach Eintrag suchen"
+ExitBox -1, -1
+search$ = InputBox(11, 10, search$, 0, 0)
+PCOPY 1, 0
+
+IF Keyb = CHR$(13) THEN
+weitersuchen:
+'Eintrag wird gesucht:
+
+AltePosition = ItemPos
+AlteSeite = ItemPage
+
+DO
+ ItemPos = ItemPos + 1
+ IF ItemPos = AltePosition THEN ItemPage = AlteSeite: EXIT DO
+ Standort = ItemPage * MaxDown - MaxDown + 1
+ IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+   Eintrag$ = Combo(ItemPos)
+   IF Eintrag$ = "" OR ItemPos > MaxItem% - 1 THEN ItemPos = 0: ItemPage = 1
+
+Beginn = INSTR(LCASE$(Eintrag$), LCASE$(search$))
+LOOP UNTIL Beginn > 0
+IF Beginn + LEN(search$) < MaxLenth THEN Beginn = 1
+GOTO weiter2
+
+
+END IF
+
+CASE "pageup"
+IF ItemPos + MaxDown > 0 THEN
+ItemPage = ItemPage - 1
+ItemPos = ItemPos - MaxDown
+END IF
+CASE "pagedown"
+IF ItemPos + MaxDown <= MaxItem% THEN
+IF Combo(ItemPos + MaxDown) <> "" THEN
+ItemPage = ItemPage + 1
+ItemPos = ItemPos + MaxDown
+END IF
+END IF
+CASE CHR$(13)
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B
+COLOR Farbe
+Choice = ItemPos: ComboBox = Combo(ItemPos): EXIT FUNCTION
+
+CASE "esc"
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B
+COLOR Farbe
+Choice = 0: Keyb = "esc": ComboBox = Combo(ItemPos): EXIT FUNCTION
+
+CASE "tab"
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B
+COLOR Farbe
+ComboBox = Combo(ItemPos): Choice = 0: EXIT FUNCTION
+
+CASE "home": Beginn = 1
+CASE "end": Beginn = Beginn + MaxLenth
+CASE "left": IF Beginn > 1 THEN Beginn = Beginn - 1
+CASE "right": Beginn = Beginn + 1
+CASE ELSE
+IF LEN(Keyb) = 1 THEN
+act$ = Keyb
+aktivieren:
+
+AltePosition = ItemPos
+AlteSeite = ItemPage
+
+DO
+ ItemPos = ItemPos + 1
+ IF ItemPos = AltePosition THEN ItemPage = AlteSeite: EXIT DO
+ Standort = ItemPage * MaxDown - MaxDown + 1
+ IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+   Eintrag$ = LEFT$(Combo(ItemPos), MaxLenth)
+   IF Eintrag$ = "" OR ItemPos > MaxItem% - 1 THEN ItemPos = 0: ItemPage = 1
+
+LOOP UNTIL LCASE$(LEFT$(Eintrag$, LEN(act$))) = LCASE$(act$)
+GOTO weiter2
+
+END IF
+
+END SELECT
+
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+IF Combo(ItemPos) = "" THEN ItemPos = ItemPos - 1
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+
+LOOP
+
+END FUNCTION
+
+SUB Control (Zeilen, Spalten, Text$)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak
+IF Zeilen > Down THEN Zeilen = Top: Spalten = NextBreak + 1: TextScale = Top: TextBreak = NextBreak
+
+IF LEN(Text$) + Spalten + 2 > NextBreak THEN NextBreak = LEN(Text$) + Spalten + 2
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + LEN(Text$)
+EndZeile = Zeilen + INT(LEN(Text$) / 80 + 1)
+IF LEN(Text$) = 80 THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+LOCATE Zeilen, Spalten: COLOR Farbe: PRINT Text$
+'LINE (a, B)-(c, d), Farbe, B
+'PAINT (a + 1, B + 1), Controlfarbe, Farbe
+LINE (a, B)-(c, d), Controlfarbe, B
+
+'Schatten: (Wird angezeigt, falls das Control aktiviert ist.
+IF Activ = Text$ THEN
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+'Control eintragen:
+a$ = Zeilen$ + Spalten$ + Text$
+i = 0
+DO: i = i + 1
+IF ControlList(i) = a$ THEN GOTO 2
+LOOP UNTIL ControlList(i) = ""
+ControlList(i) = a$
+ControlNr = 1
+
+
+2 Activ = Text$: ControlConnect = 0: TextScale = Zeilen + 2
+END SUB
+
+FUNCTION CoSinus (Winkel)
+    CoSinus = COS(Winkel * (PI / 180))
+END FUNCTION
+
+SUB DeleteBox (box$)
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = box$ THEN
+DO
+plus = plus + 1
+GET 1, i + plus, a$
+PUT 1, i + plus - 1, a$
+LOOP WHILE a$ <> ""
+errorlevel = 0: EXIT SUB
+END IF
+LOOP UNTIL a$ = ""
+
+errorlevel = 1 'Ordner nicht gefunden.
+END SUB
+
+SUB Dialog (Cap$)
+Caption$ = Cap$
+
+'Formatoptionen: gleich wie echo. Standard: "c"=zentriert
+PartFormat Caption$, fmt$
+
+IF LEN(Caption$) < 22 THEN Caption$ = STRING$(INT((22 - LEN(Kennung$)) / 2), " ") + Caption$ + STRING$(CINT((22 - LEN(Kennung$)) / 2 + .1), " ")
+
+IF LEN(Caption$) > 303 THEN Caption$ = LEFT$(Caption$, 300) + "..."
+IF LEN(Caption$) > 76 THEN Length = 76 ELSE Length = LEN(Caption$)
+Spalten = INT(40 - Length / 2 + 1)
+Zeilen = 11 - INT(LEN(Caption$) / 76) + 1
+
+x1! = Spalten * 8 - 11
+y1! = Zeilen * 14 - 17
+EndSpalten = 40 + INT(Length / 2)
+EndZeilen = 14 + INT(LEN(Caption$) / 76)
+IF INT(LEN(Caption$) / 76) > 1 THEN EndZeilen = EndZeilen - (INT(LEN(Caption$) / 76) - 1)
+IF LEN(Caption$) < 76 THEN EndZeilen = EndZeilen + 1
+x2! = EndSpalten * 8 + 4
+y2! = EndZeilen * 14 - 4
+Groesse = 4 + INT(((PMAP(x2!, 0) - PMAP(x1!, 0) + 1) * (1) + 7) / 8) * 2 * (PMAP(y2!, 1) - PMAP(y1!, 1) + 1)
+DIM Background(Groesse) AS INTEGER
+
+
+GET (x1!, y1!)-(x2!, y2!), Background
+
+FrameWindow x1!, y1!, x2! - 1, y2! - 1, 1
+
+a% = TextBreak: B% = TextScale: c% = Right: d% = Down
+    TextBreak = Spalten
+    TextScale = Zeilen
+    Right = EndSpalten
+    Down = EndZeilen
+
+        IF fmt$ = "" THEN fmt$ = "c"
+        echo Caption$ + Format(fmt$)
+
+Zeilen = TextScale
+TextBreak = a%: TextScale = B%: Right = c%: Down = d%
+
+TextBox Zeilen + 1, 33, "      OK", 14
+
+DO
+B$ = a$
+a$ = GetKey
+LOOP UNTIL a$ = "esc" OR a$ = CHR$(13)
+IF a$ = "esc" THEN Keyb = "esc" ELSE Keyb = B$
+PUT (x1!, y1!), Background, PSET: x1! = 0: y1! = 0: EXIT SUB
+
+
+END SUB
+
+FUNCTION DosFile$ (Kennung$, InOrdner$)
+'Gibt die DOS-Datei eines LaOS-Files zurÅck.
+'Beispiel: OPEN DosFile("LaOS Draw","Zubehîr") FOR INPUT AS 1
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF Kennung$ = RTRIM$(OSName$) AND InOrdner$ = RTRIM$(Ordner$) THEN DosFile = RTRIM$(Dateiname$): CLOSE 1: EXIT FUNCTION
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+errorlevel = 1
+CLOSE 1
+
+END FUNCTION
+
+FUNCTION Drivelist$ (Nr)
+STATIC LastNr
+IF Nr < 1 THEN Nr = LastNr + 1
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+GET 1, Nr, a$
+
+LastNr = Nr
+IF LEFT$(a$, 1) = "[" THEN
+    Drivelist = MID$(a$, 2, 1)
+    DriveName = MID$(a$, 5) + " (deaktiviert)"
+ELSE
+    Drivelist = LEFT$(a$, 1)
+    DriveName = MID$(a$, 4)
+END IF
+CLOSE 1
+END FUNCTION
+
+SUB echo (Txt$)
+PartFormat Txt$, fmt$
+
+'Format: "l", "c", "r": LinksbÅndig, zentriert, rechtsbÅndig
+
+SELECT CASE fmt$
+    CASE "l", "": Align% = 0
+    CASE "c": Align% = 1
+    CASE "r": Align% = 2
+END SELECT
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF TextScale > Down THEN TextScale = Top
+
+'10.11.1999: Echo mit Zeilenumbruch (C) Urs Langmeier.
+
+Text$ = Txt$ + " "
+
+DIM s AS INTEGER, z AS INTEGER, t AS INTEGER, brk AS INTEGER
+
+
+s = 1
+z = Right - TextBreak + 2'ZeilenlÑnge
+dwn = 0
+
+p1% = s
+p2% = p1%
+DO
+    t = t + 1
+        IF t = p1% THEN p2% = p1%'alten Retten
+        p1% = INSTR(t, Text$, " ")
+        IF p1% = 0 OR p1% = LEN(Text$) THEN
+            IF p1% <= s + z - 1 THEN p2% = LEN(Text$): brk = -1
+        END IF
+
+        IF p1% > s + z - 1 OR brk THEN 'nehme alten, weil neuen Åber die Zeile ragt.
+            'Zeile ausgeben:
+            p1% = p2%
+            IF TextScale + dwn > Down THEN EXIT DO
+                IF p1% - s <= 0 THEN 'falls Wort zu lange (nicht in die Zeile passt:)
+
+                    p1% = s + z - 1
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% - 1
+                    s = t + 1
+
+                ELSE
+
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% + 1
+                    s = t
+                END IF
+
+            'Ausrichtung:
+            SELECT CASE Align%
+                CASE 0: x% = TextBreak
+                CASE 1: x% = TextBreak + FIX((Right - TextBreak - LEN(a$) + 1) / 2)
+                CASE 2: x% = Right - LEN(a$) + 1
+            END SELECT
+
+            LOCATE TextScale + dwn, x%
+            PRINT a$;
+
+            dwn = dwn + 1
+        END IF
+LOOP UNTIL t >= LEN(Text$)
+TextScale = TextScale + dwn
+
+
+END SUB
+
+SUB EraseCombo
+CLOSE tmp
+OPEN "c:\laos\info.tmp" FOR BINARY AS tmp
+CLOSE tmp
+KILL "c:\laos\info.tmp"
+OPEN "c:\laos\info.tmp" FOR RANDOM AS tmp LEN = 400
+
+END SUB
+
+FUNCTION exist (p$)
+
+errorlevel = 0
+a% = FREEFILE
+OPEN p$ FOR INPUT AS a%
+CLOSE a%
+IF errorlevel THEN exist = 0 ELSE exist = -1
+
+END FUNCTION
+
+SUB ExitBox (x, y)
+IF x = -1 THEN x = EBox.left
+IF y = -1 THEN y = EBox.top
+LINE (x, y)-(x + 26, y + 20), Fensterfarbe, B
+LINE (x + 1, y + 1)-(x + 25, y + 1), Schattenfarbe
+LINE (x + 1, y + 1)-(x + 1, y + 19), Schattenfarbe
+LINE (x, y + 21)-(x + 26, y + 21), Randfarbe
+LINE (x + 27, y + 21)-(x + 27, y), Randfarbe
+
+LINE (x + 2, y + 19)-(x + 24, y + 2), Fensterfarbe
+LINE (x + 3, y + 19)-(x + 25, y + 2), Schattenfarbe
+LINE (x + 2, y + 2)-(x + 24, y + 19), Fensterfarbe
+LINE (x + 3, y + 2)-(x + 25, y + 19), Schattenfarbe
+
+END SUB
+
+FUNCTION Format$ (FormatString AS STRING)
+    Format$ = CHR$(0) + FormatString
+END FUNCTION
+
+SUB Frame
+'Frame kann ausgefÅhrt werden, um ein Rahmen um das Fenster zu machen,
+'und dabei aber die Left- Top- usw.-Kordinaten zu behalten.
+'einzig die TextScale- und TextBreak- Koordinaten wechseln nach oben links.
+'-> Siehe auch die Sub "CLW".
+
+FrameWindow 0, 0, 638, 348, 0
+
+'EBox.left = 603: EBox.top = 321
+'Left = 2: Top = 2: Right = 79: Down = 24
+TextScale = 2: TextBreak = 2
+END SUB
+
+SUB FrameWindow (a, B, c, d, del)
+'Erstellt ein Fenster, ohne dabei die Umgebungsvariablen zu verÑndern
+'Wahlweise wird der Inhalt des Fensters gelîscht (del = 1), oder nicht.
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+IF del = 1 THEN LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+END SUB
+
+FUNCTION Gerade (Zahl)
+IF Zahl / 2 - FIX(Zahl / 2) = 0 THEN Gerade = 1:  ELSE Gerade = 0
+END FUNCTION
+
+SUB GetInp
+DIM kbd AS STRING
+'Aktiviere das Control mit dem Fokus:
+SELECT CASE ControlConnect
+CASE 0: Activate MID$(ControlList(ControlNr), 5)
+END SELECT
+
+
+DO
+FOR i = 15 TO 19: KEY(i) ON: NEXT i
+  FOR i = 1 TO 4
+    AlteZeit(i) = TIMER
+  NEXT i
+WHILE INKEY$ = CHR$(13) OR INKEY$ = CHR$(27): WEND
+kbd = ""
+ WHILE kbd = ""
+  kbd = INKEY$
+   FOR i = 1 TO 4
+     IF Stoppuhr(i) > 0 THEN
+       IF TIMER - AlteZeit(i) > Stoppuhr(i) THEN StoppUhrBeep (i): AlteZeit(i) = TIMER
+     END IF
+   NEXT i
+ WEND
+TIMER OFF: FOR i = 15 TO 19: KEY(i) OFF: NEXT i
+
+SELECT CASE kbd
+CASE CHR$(13)
+SELECT CASE ControlConnect
+CASE 0: Focus = MID$(ControlList(ControlNr), 5)
+END SELECT
+Keyb = kbd
+EXIT SUB
+CASE CHR$(0) + "H", CHR$(0) + "K": LastControl: Keyb = "": EXIT SUB
+CASE CHR$(0) + "P", CHR$(0) + "M": NextControl: Keyb = "": EXIT SUB
+CASE CHR$(27)
+Keyb = "esc": EXIT SUB'Minimize
+END SELECT
+LOOP
+
+END SUB
+
+FUNCTION GetKey$
+STATIC dt%
+
+WHILE INKEY$ <> "": WEND
+
+a$ = "": WHILE a$ = "": a$ = INKEY$: WEND
+
+SELECT CASE MID$(a$, 2)
+CASE "=": a$ = "f3"
+CASE "H": a$ = "up"
+CASE "P": a$ = "down"
+CASE "K": a$ = "left"
+CASE "M": a$ = "right"
+CASE "R": a$ = "insert"
+CASE "S": a$ = "delete"
+CASE "G": a$ = "home"
+CASE "O": a$ = "end"
+CASE "I": a$ = "pageup"
+CASE "Q": a$ = "pagedown"
+CASE "<"
+IF NOT dt% THEN
+dt% = -1
+
+    Detail% = 1 - Detail%: RegEdit "Systeminfo.Detailliert=" + STR$(Detail%)
+
+            IF Detail% THEN
+                Dialog "Detaillierte Anzeige ist eingeschaltet. Aktualisieren Sie die Anzeige!"
+            ELSE
+                Dialog "Detaillierte Anzeige ist ausgeschaltet. Aktualisieren Sie die Anzeige!"
+            END IF
+dt% = 0
+END IF
+END SELECT
+
+SELECT CASE ASC(a$)
+CASE 27: a$ = "esc"
+CASE 9: a$ = "tab"
+CASE 19, 6: a$ = "^s"
+END SELECT
+
+GetKey = a$
+Keyb = a$
+END FUNCTION
+
+FUNCTION GetProgramsGreat#
+
+m# = 0
+nz = TIMER + .5
+file% = FREEFILE
+CLOSE file%: OPEN "DATEIEN.BNK" FOR RANDOM AS file% LEN = 400
+FIELD file%, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+TimeLock 1
+a = 0
+DO
+a = a + 1
+GET file%, a
+
+m# = m# + GreatOfPal(RTRIM$(Dateiname$))
+
+IF TIMER > nz THEN nz = TIMER + .5: TimeLock 1
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+
+TimeLock 0
+GetProgramsGreat# = m#
+CLOSE file%
+
+END FUNCTION
+
+FUNCTION GetTotalGreat#
+
+f2% = FREEFILE
+
+great# = 0
+CLOSE f2%: OPEN "DATEIEN.BNK" FOR RANDOM AS #f2% LEN = 400
+FIELD f2%, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+nz = TIMER + .5
+
+TimeLock 1
+
+a = 0
+DO
+a = a + 1
+GET f2%, a
+
+    Keyb = INKEY$
+    IF Keyb <> "" THEN TimeLock 0: CLOSE f2%: ActualizeNow = -1: EXIT FUNCTION
+
+IF TIMER > nz THEN nz = TIMER + .5: TimeLock 1
+
+        f% = FREEFILE
+            IF exist(RTRIM$(Dateiname$) + ".lao") THEN
+                OPEN RTRIM$(Dateiname$) + ".lao" FOR BINARY AS f%
+            ELSE
+                OPEN RTRIM$(Dateiname$) FOR BINARY AS f%
+          END IF
+
+            great# = great# + LOF(f%)
+            CLOSE f%
+
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+TimeLock 0
+CLOSE f2%
+GetTotalGreat# = great#
+
+END FUNCTION
+
+SUB Graphicview (a, B, c, d)
+'Diese Sub Ñndert die Umgebungsvariablen (Left, Top, usw.) fÅr einen bestimmt-
+'en Fenster-Bereich. Die darauffolgenden Grafikausgaben erfolgen in diesem
+'Bereich.
+LINE (a, B)-(c, d), Controlfarbe, BF
+
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+TextBreak = Left
+TextScale = Top
+END SUB
+
+FUNCTION GreatOfBox# (box$)
+
+f2% = FREEFILE
+
+great# = 0
+CLOSE f2%: OPEN "DATEIEN.BNK" FOR RANDOM AS #f2% LEN = 400
+FIELD f2%, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+    Keyb = INKEY$
+    IF Keyb <> "" THEN CLOSE f2%: ActualizeNow = -1: EXIT FUNCTION
+
+
+GET f2%, a
+
+    IF box$ = RTRIM$(Ordner$) THEN
+        f% = FREEFILE
+            IF exist(RTRIM$(Dateiname$) + ".lao") THEN
+                OPEN RTRIM$(Dateiname$) + ".lao" FOR BINARY AS f%
+            ELSE
+                OPEN RTRIM$(Dateiname$) FOR BINARY AS f%
+            END IF
+
+            great# = great# + LOF(f%)
+            CLOSE f%
+
+    END IF
+
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+errorlevel = 1
+CLOSE f2%
+GreatOfBox# = great#
+END FUNCTION
+
+FUNCTION GreatOfPal# (Datei$)
+
+m# = 0
+f% = FREEFILE
+IF NOT exist(Datei$ + ".pal") THEN GOTO 270212
+
+OPEN Datei$ + ".pal" FOR INPUT AS #f%
+
+DO WHILE NOT EOF(f%)
+    LINE INPUT #f%, a$
+    xPalConvert a$
+        ft% = FREEFILE
+        OPEN a$ FOR BINARY AS ft%
+        m# = m# + LOF(ft%)
+        CLOSE ft%
+LOOP
+
+m# = m# + LOF(f%)
+CLOSE f%
+
+270212
+IF exist(Datei$ + ".lao") THEN
+    OPEN Datei$ + ".lao" FOR BINARY AS f%
+    m# = m# + LOF(f%)
+    CLOSE f%
+ELSE
+    OPEN Datei$ FOR BINARY AS f%
+    m# = m# + LOF(f%)
+    CLOSE f%
+END IF
+GreatOfPal# = m#
+END FUNCTION
+
+FUNCTION InputBox$ (Zeilen, Spalten, Text$, break, MaxDown)
+'Break=Zeilenumbruch | MaxDown=Maximale Zeilen
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF break = 0 OR break > Right - Spalten THEN break = Right - Spalten
+IF MaxDown = 0 THEN MaxDown = 24 - Zeilen
+TotalBreak = break
+Texta$ = Text$: a$ = ""
+GOTO Deletefirst
+
+lesen:
+a$ = GetKey
+
+IF a$ = CHR$(13) THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "up" OR a$ = "down" OR a$ = "left" OR a$ = "right" OR a$ = "tab" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "esc" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = CHR$(8) THEN
+IF LEN(Texta$) > 0 THEN Texta$ = LEFT$(Texta$, LEN(Texta$) - 1)
+LINE (a, B)-(c + 1, d + 1), 0, BF
+a$ = ""
+END IF
+IF dwn > MaxDown THEN a$ = "": nocur = 1
+
+IF LEN(a$) = 1 THEN Texta$ = Texta$ + a$
+break = LEN(Texta$) + 1
+
+Deletefirst:
+break = LEN(Texta$) + 1
+dwn = INT(LEN(Texta$) / TotalBreak) + 1
+IF break > TotalBreak THEN break = TotalBreak: nocur = 1
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + break
+EndZeile = Zeilen + INT(LEN(Texta$) / break + 1)
+IF dwn > MaxDown AND MaxDown > 1 THEN EndZeile = EndZeile - 1
+IF break = LEN(Texta$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+
+ecr = TotalBreak * -1 + 1
+FOR i = 1 TO INT(LEN(Texta$) / TotalBreak) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + TotalBreak
+PRINT MID$(Texta$, ecr, TotalBreak);
+NEXT i
+ecr = 0
+
+IF nocur = 0 THEN LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14), InfoColor ELSE nocur = 0
+GOTO lesen
+
+delcur:
+LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14), 0
+
+END FUNCTION
+
+FUNCTION IsEmptyBox (Ordner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS InOrdner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+TimeLock 1
+AlteZeit = TIMER
+DO
+GET 1
+IF RTRIM$(InOrdner$) = Ordner$ THEN IsEmptyBox = 0: TimeLock 0: EXIT FUNCTION
+
+IF TIMER - AlteZeit > .5 THEN TimeLock 1: AlteZeit = TIMER
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+TimeLock 0
+
+IsEmptyBox = 1'Box ist leer
+END FUNCTION
+
+FUNCTION IsExist (Datei$, InOrdner$)
+
+CLOSE 1: OPEN "DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET 1, a
+IF Datei$ = RTRIM$(OSName$) AND InOrdner$ = RTRIM$(Ordner$) THEN IsExist = 1: EXIT FUNCTION
+IF Datei$ = RTRIM$(OSName$) AND InOrdner$ = "" THEN IsExist = 1: EXIT FUNCTION
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+
+IsExist = 0
+
+
+END FUNCTION
+
+FUNCTION IsExistBox (box$)
+
+CLOSE 1: OPEN "ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = box$ THEN IsExistBox = 1: EXIT FUNCTION
+LOOP UNTIL a$ = ""
+
+IsExistBox = 0
+END FUNCTION
+
+SUB LastControl
+SELECT CASE ControlConnect
+CASE 0
+ControlNr = ControlNr - 1
+IF ControlNr < 1 THEN ControlNr = 1
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+END SELECT
+END SUB
+
+SUB Main
+DIM g AS DOUBLE, Sonstige AS DOUBLE, last AS INTEGER, this AS INTEGER
+
+'Hier kommt Ihr Code hin:
+Left = 5
+Right = 75
+
+IF NOT exist("c:\laos\space.exe") THEN Dialog "Das Modul zum auslesen des Speichers ist nicht vorhanden. Fordern Sie dieses bei Ihrem LaOS-HÑndler an!": EXIT SUB
+
+
+neuanz:
+a = 5 * 8 - 11
+B = 8 * 14 - 17
+c = 75 * 8 + 1
+d = 23 * 14 + 1
+
+
+FrameWindow a, B, c, d, 1
+
+
+DIM Free AS DOUBLE, Total AS DOUBLE, Voll AS DOUBLE
+DIM FreePz AS INTEGER, TotalPz AS INTEGER, VollPz AS INTEGER
+
+Radius = 90
+asp = .85 'Aspekt
+
+a% = 314 'Kreismittelpunkt
+B% = 200
+
+Total = VAL(Tot$)
+Free = VAL(Fre$)
+Voll = Total - Free
+
+FreePz = INT(Free / Total * 100)
+Keyb = ""
+
+SELECT CASE ActiveMode
+CASE "Normal", ""
+PieSliece a%, B%, Radius, 0, FreePz, "Frei: " + MB(Free), InfoColor, InfoFrame
+PieSliece a%, B%, Radius, FreePz, 100, "Belegt: " + MB(Voll), Farbe, InfoFrame
+
+
+CASE "Nach Ordnern"
+
+IF FileSystemSize = 0 THEN FileSystemSize = GetTotalGreat
+
+Total = FileSystemSize
+
+
+file% = FREEFILE
+
+Sonstige = 0
+last = 0
+this = 0
+break% = 0
+OPEN "ordner.bnk" FOR RANDOM AS file%
+DO
+    GET file%, , a$
+
+        IF Keyb = CHR$(0) + "K" OR Keyb = CHR$(0) + "H" THEN LastControl: EXIT SUB
+        IF Keyb = CHR$(0) + "P" OR Keyb = CHR$(0) + "M" THEN NextControl: EXIT SUB
+        IF Keyb = CHR$(27) OR Keyb = CHR$(13) OR Keyb = CHR$(9) THEN ActiveMode = "Normal": GOTO neuanz
+
+IF a$ = "" THEN a$ = "Papierkorb": break% = -1
+
+        g = GreatOfBox(a$)
+            IF g / Total * 100 < 5 THEN
+                Sonstige = Sonstige + g
+            ELSE
+                this = last + (g / Total * 100)
+                c% = c% + 1
+                IF c% > 15 OR c% < 1 THEN c% = 1
+                PieSliece a%, B%, Radius, last, this, a$ + ": " + MB(g), c%, InfoFrame
+                last = this
+            END IF
+
+LOOP WHILE NOT break%
+
+    c% = c% + 1
+        IF c% > 15 OR c% < 1 THEN c% = 1
+
+IF Total * (100 - last) / 100 > 0 THEN PieSliece a%, B%, Radius, last, 100, "Weitere Ordner: " + MB(Total * (100 - last) / 100), c%, InfoFrame
+
+
+CASE "Nach Dateien"
+IF ProgramSize = 0 THEN ProgramSize = GetProgramsGreat
+
+Total = ProgramSize
+
+
+file% = FREEFILE
+
+Sonstige = 0
+last = 0
+this = 0
+
+CLOSE file%: OPEN "DATEIEN.BNK" FOR RANDOM AS file% LEN = 400
+FIELD file%, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OSName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+
+a = 0
+DO
+a = a + 1
+GET file%, a
+
+        IF Keyb = CHR$(0) + "K" OR Keyb = CHR$(0) + "H" THEN LastControl: EXIT SUB
+        IF Keyb = CHR$(0) + "P" OR Keyb = CHR$(0) + "M" THEN NextControl: EXIT SUB
+        IF Keyb = CHR$(27) OR Keyb = CHR$(13) OR Keyb = CHR$(9) THEN ActiveMode = "Normal": GOTO neuanz
+
+
+        g = GreatOfPal(RTRIM$(Dateiname$))
+            IF g * 100 / Total < 4 THEN
+                Sonstige = Sonstige + g
+            ELSE
+                this = last + (g / Total * 100)
+                IF this > 100 THEN this = 100
+                c% = c% + 1
+                IF c% > 15 OR c% < 1 THEN c% = 1
+                PieSliece a%, B%, Radius, last, this, RTRIM$(OSName$), c%, InfoFrame
+                last = this
+            END IF
+
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+
+    c% = c% + 1
+        IF c% > 15 OR c% < 1 THEN c% = 1
+
+IF Total * (100 - last) / 100 > 0 THEN PieSliece a%, B%, Radius, last, 100, "Weitere Dateien", c%, InfoFrame
+
+
+CASE "Nach Dokumentgruppen"
+
+
+END SELECT
+
+CLOSE file%
+
+SetCombo 1, "Normal"
+SetCombo 2, "Nach Ordnern"
+SetCombo 3, "Nach Dateien"
+'SetCombo 4, "Nach Dokumentgruppen"
+
+ActivItem = ActiveMode: a$ = ComboBox(1, 23, 5, 23, 24)
+
+END SUB
+
+SUB MakeWindow (a, B, c, d)
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+
+END SUB
+
+FUNCTION MB$ (Wert AS DOUBLE)
+'Gibt vom angegebenen Byte-Wert den Wert in KB, MB oder GB-String zurÅck:
+'Achtung: Gibt nicht die genauen Werte zurÅck:
+'Nimmt an, dass 1MB genau 1 Mio Bytes hat...
+'
+IF Wert / 2 ^ 10 < 1 THEN MB = STR$(CLNG(Wert)) + " Byte"
+IF Wert / 2 ^ 10 > 1 THEN MB = STR$(CLNG(Wert / 2 ^ 10)) + " KB   "
+IF Wert / 2 ^ 20 > 1 THEN MB = STR$(CLNG((Wert / 2 ^ 20) * 10) / 10) + " MB"
+IF Wert / 2 ^ 30 > 1 THEN MB = STR$(CLNG((Wert / 2 ^ 30) * 100) / 100) + " GB"
+
+END FUNCTION
+
+SUB NextControl
+SELECT CASE ControlConnect
+CASE 0
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE ControlList(tC) <> ""
+tC = tC - 1
+
+ControlNr = ControlNr + 1
+IF ControlNr > tC THEN ControlNr = tC
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+Control Zeilen, Spalten, Texta$
+LOOP UNTIL a$ = ""
+END SELECT
+END SUB
+
+SUB PartFormat (Text$, Setting$)
+
+IF INSTR(Text$, CHR$(0)) THEN
+    Setting$ = MID$(Text$, INSTR(Text$, CHR$(0)) + 1)
+    Text$ = LEFT$(Text$, INSTR(Text$, CHR$(0)) - 1)
+ELSE
+    Setting$ = ""
+END IF
+
+END SUB
+
+SUB PieSliece (a%, B%, Radius, StartPz%, EndePz%, Titel$, col%, randcol%)
+'Zeichnet ein KuchenstÅck. (Kuchendiagramm)
+'StartPz% gibt die Prozentzahl des Starts an, EndePz% die des Endes
+
+asp = .85
+
+CIRCLE (a%, B%), Radius, randcol%, , , asp
+
+
+w1 = StartPz% * 3.6
+
+    x1 = Radius * Sinus(w1) + a%
+    y1 = (Radius * CoSinus(w1)) * asp + B%
+
+LINE (x1, y1)-(a%, B%), randcol%
+
+w2 = EndePz% * 3.6
+
+    x2 = Radius * Sinus(w2) + a%
+    y2 = (Radius * CoSinus(w2)) * asp + B%
+
+LINE (x2, y2)-(a%, B%), randcol%
+
+w2 = (((EndePz% - StartPz%) / 2) * 360 / 100) + w1
+
+    x2 = (Radius / 2) * Sinus(w2) + a%
+    y2 = ((Radius / 2) * CoSinus(w2)) * asp + B%
+
+PAINT (x2, y2), col%, randcol%
+
+IF x2 > a% THEN xp% = 1 ELSE xp% = 0
+IF y2 > B% THEN yp% = 1 ELSE yp% = 0
+
+    x2 = ((Radius + 8) * Sinus(w2) + a%) / 8 + xp%
+    y2 = (((Radius + 14) * CoSinus(w2)) * asp + B%) / 14 + yp%
+
+TextBreak = x2
+TextScale = y2
+LOCATE y2, x2
+
+IF xp% = 0 THEN
+    ar% = Right
+    Right = x2
+    TextBreak = Left
+    echo Titel$ + Format("r")
+    Right = ar%
+ELSE
+    echo Titel$ + Format("l")
+END IF
+
+END SUB
+
+SUB RegEdit (Eintrag$)
+'Schreibt einen beliebigen Ausdruck in die Registry. Existiert der Nenner
+'schon, so Åberschreibt Regedit den Bezeichner.
+'Eintrag$: ein Eintrag in Form von 'Nenner=Bezeichner'
+'-> Function RegItem
+
+'PrÅfen, ob Eintrag schon vorhanden:
+vh = 0
+f = FREEFILE
+OPEN "c:\laos\registry.bnk" FOR BINARY AS f: CLOSE f
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+
+lin = 0
+DO WHILE NOT EOF(f)
+lin = lin + 1
+LINE INPUT #f, a$
+IF UCASE$(LEFT$(a$, INSTR(Eintrag$, "="))) = UCASE$(LEFT$(Eintrag$, INSTR(Eintrag$, "="))) THEN vh = 1: EXIT DO
+LOOP
+
+f2 = FREEFILE
+CLOSE f
+
+IF vh = 1 THEN 'Eintrag ersetzen:
+
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+OPEN "c:\laos\registry.tmp" FOR OUTPUT AS f2
+FOR i = 1 TO lin - 1
+LINE INPUT #f, a$
+PRINT #f2, a$
+NEXT
+PRINT #f2, Eintrag$
+LINE INPUT #f, a$
+DO WHILE NOT EOF(f)
+LINE INPUT #f, a$
+PRINT #f2, a$
+LOOP
+CLOSE f, f2
+KILL "c:\laos\registry.bnk"
+NAME "c:\laos\registry.tmp" AS "c:\laos\registry.bnk"
+
+
+ELSE    'Eintrag hinzufÅgen:
+
+OPEN "c:\laos\registry.bnk" FOR APPEND AS f
+PRINT #f, Eintrag$
+CLOSE f
+
+END IF
+
+END SUB
+
+SUB Register (z, s, zu, su, Text$)
+IF z = 0 THEN z = 1
+IF s = 0 THEN s = 1
+IF zu = 0 THEN zu = 25
+IF su = 0 THEN su = 80
+IF s + LEN(Text$) > su - 1 AND su - s > 2 THEN Text$ = LEFT$(Text$, su - s - 3) + ".."
+a = s * 8 - 4
+B = z * 14 - 9
+c = su * 8 - 7
+d = zu * 14 - 7
+'Fenster:
+LINE (a, B - 4)-(c, d), 0, BF
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+LOCATE INT(B / 14) + 1, TextBreak
+PRINT Text$
+break = su - 1
+IF z = 1 THEN LINE (0, 0)-(638, 0), Fensterfarbe: LINE (1, 1)-(637, 1), 0: LINE (1, 1)-(1, 347), 0
+EBox.left = c - 31: EBox.top = d - 24
+Left = s + 1: Top = z + 1: Right = su - 1: Down = zu - 1
+END SUB
+
+FUNCTION RegItem$ (Nenner$)
+'Gibt einen Eintrag aus der Registry zurÅck. Nenner$: Ein beliebiger Nenner,
+'welcher in der Registry vorhanden ist.
+'Siehe auch SUB Regedit
+
+vh = 0
+f = FREEFILE
+OPEN "c:\laos\registry.bnk" FOR BINARY AS f: CLOSE f
+OPEN "c:\laos\registry.bnk" FOR INPUT AS f
+
+DO WHILE NOT EOF(f)
+LINE INPUT #f, a$
+IF UCASE$(LEFT$(a$, LEN(Nenner$))) = UCASE$(Nenner$) AND MID$(a$, LEN(Nenner$) + 1, 1) = "=" THEN vh = 1: EXIT DO
+LOOP
+CLOSE f
+
+IF vh = 0 THEN errorlevel = 1: EXIT FUNCTION
+
+RegItem = MID$(a$, LEN(Nenner$) + 2)
+END FUNCTION
+
+FUNCTION SDate$ 'Function fÅr das System-Datum
+SELECT CASE Datumsformat
+CASE 0'TT.MM.JJJJ
+SDate$ = MID$(DATE$, 4, 2) + "." + LEFT$(DATE$, 2) + "." + RIGHT$(DATE$, 4)
+CASE 1'MM-TT-JJJJ
+SDate$ = DATE$
+CASE 2'JJJJ/MM/TT
+SDate$ = RIGHT$(DATE$, 4) + "/" + LEFT$(DATE$, 2) + "/" + MID$(DATE$, 4, 2)
+END SELECT
+END FUNCTION
+
+SUB SetCombo (Nr, Wert AS STRING)
+
+PUT tmp, Nr, Wert
+
+END SUB
+
+FUNCTION Sinus (Winkel)
+    Sinus = SIN(Winkel * (PI / 180))
+END FUNCTION
+
+SUB StoppUhrBeep (Uhr)
+SELECT CASE Uhr
+CASE 1: TimeLock 1
+CASE 2: SCREEN , , , 1: COLOR , 0
+a$ = "": DO: a$ = INKEY$: LOOP WHILE a$ = ""
+SCREEN , , , 0: COLOR Farbe, Hintergrundfarbe
+END SELECT
+END SUB
+
+SUB Switchdrive (lw$)
+IF lw$ = "c" THEN SHELL "c:": CHDIR "\laos": EXIT SUB
+
+ON ERROR GOTO fehlernext
+errorlevel = 0
+SHELL lw$ + ":"
+CHDIR "\laos"
+
+IF errorlevel = 0 THEN
+
+CLOSE 1: OPEN "c:\laos\drvlist.bnk" FOR RANDOM AS 1
+   
+    i = 0
+    DO
+        i = i + 1
+        GET 1, i, a$
+    LOOP UNTIL LEFT$(a$, 1) = lw$ OR a$ = ""
+
+CLOSE 1: OPEN lw$ + ":\laos\medname.inf" FOR RANDOM AS 1
+GET 1, 1, DriveName
+IF DriveName = "" THEN DriveName = MID$(a$, 4)
+
+END IF
+
+END SUB
+
+SUB TextBox (Zeilen, Spalten, Text$, break)
+'Break heisst hier: Hier wird der Text gebrochen (Zeilenumbruch)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Zeilen > 24 THEN Zeilen = 24
+
+IF Spalten + LEN(Text$) > Right AND break = 0 THEN break = Right - Spalten
+IF break = 0 THEN break = LEN(Text$)
+IF break = 0 THEN Spalten = Spalten - 1: break = 1
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + break
+EndZeile = Zeilen + INT(LEN(Text$) / break + 1)
+IF break = LEN(Text$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+ecr = break * -1 + 1
+FOR i = 1 TO INT(LEN(Text$) / break) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + break
+PRINT MID$(Text$, ecr, break)
+NEXT i
+ecr = 0
+
+
+TextScale = EndZeile + 1
+END SUB
+
+SUB TimeLock (Status)
+STATIC On.too
+STATIC tm
+Radius = 14 * 2
+Farbe1 = 12
+Farbe2 = 9
+x = 319 - Radius
+y = 174 - Radius
+
+SELECT CASE Status
+CASE 1:
+'Falls es das erste Mal ist, muss der Hintergrund noch gespeichert werden:
+IF On.too = 0 THEN On.too = 1: GET (319 - Radius, 174 - Radius)-(319 + Radius, 174 + Radius), Hintergrund ELSE PUT (319 - Radius, 174 - Radius), Hintergrund, PSET
+
+IF tm = 1 THEN tm = 0 ELSE tm = 1
+
+IF tm = 0 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe1
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe1
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe1, , , .9
+PAINT (x + Radius + 1, y + Radius), Farbe1
+PAINT (x + Radius - 1, y + Radius), Farbe1
+END IF
+
+
+IF tm = 1 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe2
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe2
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe2, , , .9
+PAINT (x + Radius, y + Radius + 1), Farbe2
+PAINT (x + Radius, y + Radius - 1), Farbe2
+END IF
+CASE 0: IF On.too <> 0 THEN On.too = 0: PUT (319 - Radius, 174 - Radius), Hintergrund, PSET: Stoppuhr(1) = 0
+END SELECT
+END SUB
+
+FUNCTION Trim$ (Variable$, Trennzeichen$, a)
+
+mcr = 0
+gef = 0
+FOR i = 1 TO LEN(Variable$)
+mcr = mcr + 1
+a$ = MID$(Variable$, mcr)
+IF LEFT$(a$, 1) = Trennzeichen$ THEN gef = gef + 1
+IF gef = a - 1 THEN EXIT FOR
+NEXT
+IF LEFT$(a$, 1) = Trennzeichen$ THEN a$ = MID$(a$, 2) ELSE a$ = a$
+
+mcr = 0
+FOR i = 1 TO LEN(a$)
+mcr = mcr + 1
+IF MID$(a$, mcr, 1) = Trennzeichen$ THEN a$ = LEFT$(a$, mcr - 1): EXIT FOR
+NEXT
+
+Trim$ = a$
+
+END FUNCTION
+
+SUB xPalConvert (a$)
+'Version, die nur den execute%-0-Mode unterstÅtzt
+'(Nur Dateien auslesen)
+
+SELECT CASE LEFT$(a$, 1)
+CASE "?"
+    l% = INSTR(a$, "|") - 2
+    IF l% <= 0 THEN l% = LEN(a$) - 1
+    a$ = MID$(a$, 2, l%)
+
+CASE ":", "*", "/"
+    a$ = MID$(a$, 2)
+
+CASE ELSE
+END SELECT
+
+END SUB
+

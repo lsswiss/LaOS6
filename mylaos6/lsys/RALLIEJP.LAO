@@ -1,0 +1,704 @@
+DECLARE SUB Center (m$)
+DECLARE SUB SeaGenerate ()
+DECLARE SUB Bild3 ()
+DECLARE SUB Bild1 ()
+DECLARE SUB Bild2 ()
+SCREEN 9
+COLOR , 63
+CLS
+Bild1
+az = TIMER: DO: LOOP UNTIL TIMER - az >= 2
+CLS
+Bild3
+az = TIMER: DO: LOOP UNTIL TIMER - az >= .5
+Bild2
+az = TIMER: DO: LOOP UNTIL TIMER - az >= .5
+
+DIM stickkalibrate AS LONG
+
+DIM SHARED stopp AS INTEGER
+CONST SeaLength = 70
+4 RANDOMIZE TIMER
+5 SCREEN 0
+6 VIEW PRINT 1 TO 25
+7 COLOR 15, 10
+10 CLS
+
+LOCATE 5
+Center "Eine beliebige Taste drЃcken, um das Spiel zu starten."
+PRINT
+Center "FЃr Bedienung mit Joystick: Joystick gerade halten und Knopf drЃcken."
+
+WHILE INKEY$ <> "": WEND
+SOUND 40, 3: FOR i = 1 TO 2: SOUND 80, 1: SOUND 70, 1: SOUND 50 + i * 2, 1: SOUND 58, 3.6: NEXT: FOR i = 70 TO 43 STEP -1: SOUND i, 1: NEXT
+t1 = 43: t2 = 45
+DO
+SWAP t1, t2
+SOUND t1, 1
+LOOP UNTIL INKEY$ <> "" OR STRIG(1) OR STRIG(5)
+
+stickkalibrate = STICK(0)
+
+FOR i = t2 TO 47
+SOUND i, 1
+NEXT
+CLS
+
+DIM SeeSchon AS INTEGER
+SeeSchon = 0
+
+12 DIM ton1 AS LONG, ton2 AS LONG
+15 ton1 = 46: ton2 = 47
+17 PLAY "mfo4t200l6ml"
+20 LET C = 40
+30 LET L = 35
+40 LET W = 20
+41 LET SND = 1
+42 strCol = 7
+45 GOTO 55
+50
+IF s > 400 AND SeeSchon = 0 THEN GOTO SpecialLake
+50.1
+IF W < 5 THEN W = 5
+51 COLOR strCol, 10: LOCATE CSRLIN - 1, L: PRINT STRING$(W, "Ы")
+55 IF INT(L / 5) * 5 = L THEN LET N = INT(RND(1) * 2)
+60 IF L <= 1 THEN LET N = 1
+70 IF L >= 79 - W THEN LET N = 0
+80 IF N = 1 THEN LET L = L + 1
+90 IF N = 0 THEN LET L = L - 1
+95 LET R = L + W
+
+COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+a$ = INKEY$
+IF a$ = "" THEN
+ta = STICK(0)
+IF ta < stickkalibrate THEN a$ = "4"
+IF ta > stickkalibrate THEN a$ = "6"
+END IF
+110 IF a$ = "6" OR a$ = CHR$(0) + "M" THEN LET C = C + 1
+120 IF a$ = "4" OR a$ = CHR$(0) + "K" THEN LET C = C - 1
+121 IF a$ = CHR$(27) THEN 210
+122 IF a$ = "s" OR a$ = "S" THEN SWAP SND, SND2
+
+125 IF s >= 1199 THEN GOTO 250
+130 IF C <= L OR C >= R THEN GOTO 160
+140 COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+141 COLOR 0, strCol: LOCATE , C: PRINT "*";
+142 IF SND = 1 THEN SWAP ton1, ton2: SOUND ton1, 3.6
+143 WHILE INKEY$ <> "": WEND
+144 az = TIMER: DO: LOOP WHILE TIMER - az < .2
+145 COLOR 15, 10: PRINT
+146 LET s = s + 1
+147 IF INT(s / 100) * 100 = s THEN W = W - 1
+150 GOTO 50
+160 COLOR 0: PRINT TAB(L); "***UNFALL***"
+170 LET CR = CR + 1
+180 IF CR <= 5 THEN LET C = L + INT(W / 2): GOTO 55
+190 PRINT "Das Spiel ist aus."
+200 PRINT "Der Spielstand ist"; s
+205 az = TIMER: DO: LOOP UNTIL TIMER - az > 5
+210 CHAIN "c:\laos\run.bas"
+
+250 REM Ziel erreicht:
+260 COLOR 15, 4
+CLS
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ                           ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "                              ЪДДДДДДДДДДДДї                                    "
+PRINT "                              іЬ Ь Ь Ь Ь Ь і                                    "
+PRINT "                              і Ь Ь Ь Ь Ь  і                                    "
+PRINT "        HERZLICHE             іЬ Ь ЬЬ Ь  Ь і              GRATULATION !!!       "
+PRINT "                              іЬ Ь Ь Ь Ь Ь і                                    "
+PRINT "      Sie haben das           іЬ Ь Ь Ь Ь Ь і               Ziel erreicht.       "
+PRINT "                              іЬ       Ь Ь і                                    "
+PRINT "                              і  ЫЫ ЫЫ     і                                    "
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ      оооооо               ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ     оооооо                ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ   оооооо                  ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫоооооооо                   ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫооооооо                    ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫоооооо                     ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫооооо                      ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫоооо                       ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ"
+PRINT "ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫоооо                       ЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫЫ";
+PLAY "T 166MB"
+PLAY "L 4O 3 cL 8O 3 dL 4O 3 cL 4O 2 bL 2O 3 cP 4L 4O 3 eL 8O 3 fL 4O 3 eL 4O 3 dL 2O 3 eP 4L 4O 3 gL 4O 3 gL 4O 3 eL 4O 3 cL 4O 2 gL 4O 3 aL 2O 3 gP 4L 8O 3 fL 2O 3 fL 8O 3 gL 4O 3 eL 4O 3 cL 4O 3 dL 4O 3 dL 1O 3 c"
+az = TIMER: DO: LOOP UNTIL TIMER - az > 10
+SLEEP 1
+CHAIN "c:\laos\run.bas"
+
+
+SpecialLake:
+'erzeugt eine kЃnstliche Umgebung, mit einem See:
+
+'macht dem See in der rechten Bildh„lfte Platz:
+start1:
+
+
+COLOR strCol, 10: LOCATE CSRLIN - 1, L: PRINT STRING$(W, "Ы")
+IF INT(L / 5) * 5 = L THEN LET N = INT(RND(1) * 2)
+IF L > 5 THEN
+    N = 0 'nach links
+ ELSEIF L < 5 THEN
+    N = 1 'nach rechts
+ ELSE GOTO Next1
+END IF
+
+IF L <= 1 THEN LET N = 1
+IF L >= 79 - W THEN LET N = 0
+IF N = 1 THEN LET L = L + 1
+IF N = 0 THEN LET L = L - 1
+LET R = L + W
+
+COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+a$ = INKEY$
+IF a$ = "" THEN
+ta = STICK(0)
+IF ta < stickkalibrate THEN a$ = "4"
+IF ta > stickkalibrate THEN a$ = "6"
+END IF
+
+IF a$ = "6" OR a$ = CHR$(0) + "M" THEN LET C = C + 1
+IF a$ = "4" OR a$ = CHR$(0) + "K" THEN LET C = C - 1
+IF a$ = CHR$(27) THEN 210
+IF a$ = "s" OR a$ = "S" THEN SWAP SND, SND2
+IF C <= L OR C >= R THEN GOSUB Unfall2
+
+COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+COLOR 0, strCol: LOCATE , C: PRINT "*";
+IF SND = 1 THEN SWAP ton1, ton2: SOUND ton1, 3.6
+WHILE INKEY$ <> "": WEND
+az = TIMER: DO: LOOP WHILE TIMER - az < .2
+COLOR 15, 10: PRINT
+LET s = s + 1
+IF INT(s / 100) * 100 = s THEN W = W - 1
+GOTO start1
+
+Next1:
+
+IF W < 5 THEN W = 5
+COLOR strCol, 10: LOCATE CSRLIN - 1, L: PRINT STRING$(W, "Ы")
+IF INT(L / 5) * 5 = L THEN LET N = INT(RND(1) * 2)
+IF L <= 1 THEN LET N = 1
+IF L >= 39 - W THEN LET N = 0
+IF N = 1 THEN LET L = L + 1
+IF N = 0 THEN LET L = L - 1
+LET R = L + W
+
+COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+a$ = INKEY$
+IF a$ = "" THEN
+ta = STICK(0)
+IF ta < stickkalibrate THEN a$ = "4"
+IF ta > stickkalibrate THEN a$ = "6"
+END IF
+
+IF a$ = "6" OR a$ = CHR$(0) + "M" THEN LET C = C + 1
+IF a$ = "4" OR a$ = CHR$(0) + "K" THEN LET C = C - 1
+IF a$ = CHR$(27) THEN 210
+IF a$ = "s" OR a$ = "S" THEN SWAP SND, SND2
+
+IF s >= 1199 THEN GOTO 250
+
+COLOR strCol, 10: LOCATE , L: PRINT STRING$(W, "Ы");
+IF C <= L OR C >= R THEN GOSUB Unfall2: PRINT
+
+SeaGenerate
+IF stopp = 1 THEN GOTO Next2
+
+COLOR 0, strCol: LOCATE , C: PRINT "*";
+IF SND = 1 THEN SWAP ton1, ton2: SOUND ton1, 3.6
+WHILE INKEY$ <> "": WEND
+az = TIMER: DO: LOOP WHILE TIMER - az < .2
+COLOR 15, 10: PRINT
+LET s = s + 1
+IF INT(s / 100) * 100 = s THEN W = W - 1
+GOTO Next1
+
+Next2:
+
+SeeSchon = 1
+GOTO 50.1
+
+
+Unfall2:
+COLOR 0: LOCATE , L: PRINT "***UNFALL***";
+LET CR = CR + 1
+IF CR <= 5 THEN LET C = L + INT(W / 2): RETURN ELSE GOTO 190
+
+SUB Bild1
+LINE (199, 104)-(204, 109), 8, BF
+LINE (223, 104)-(228, 109), 8, BF
+LINE (199, 110)-(204, 115), 8, BF
+LINE (205, 110)-(210, 115), 8, BF
+LINE (217, 110)-(222, 115), 8, BF
+LINE (223, 110)-(228, 115), 8, BF
+LINE (199, 116)-(204, 121), 8, BF
+LINE (205, 116)-(210, 121), 8, BF
+LINE (217, 116)-(222, 121), 8, BF
+LINE (223, 116)-(228, 121), 8, BF
+LINE (199, 122)-(204, 127), 8, BF
+LINE (211, 122)-(216, 127), 8, BF
+LINE (223, 122)-(228, 127), 8, BF
+LINE (199, 128)-(204, 133), 8, BF
+LINE (211, 128)-(216, 133), 8, BF
+LINE (223, 128)-(228, 133), 8, BF
+LINE (199, 134)-(204, 139), 8, BF
+LINE (223, 134)-(228, 139), 8, BF
+LINE (199, 140)-(204, 145), 8, BF
+LINE (223, 140)-(228, 145), 8, BF
+LINE (241, 110)-(246, 115), 8, BF
+LINE (247, 110)-(252, 115), 8, BF
+LINE (235, 116)-(240, 121), 8, BF
+LINE (253, 116)-(258, 121), 8, BF
+LINE (253, 122)-(258, 127), 8, BF
+LINE (241, 128)-(246, 133), 8, BF
+LINE (247, 128)-(252, 133), 8, BF
+LINE (253, 128)-(258, 133), 8, BF
+LINE (235, 134)-(240, 139), 8, BF
+LINE (253, 134)-(258, 139), 8, BF
+LINE (241, 140)-(246, 145), 8, BF
+LINE (247, 140)-(252, 145), 8, BF
+LINE (259, 140)-(264, 145), 8, BF
+LINE (283, 110)-(288, 115), 8, BF
+LINE (283, 116)-(288, 121), 8, BF
+LINE (277, 122)-(282, 127), 8, BF
+LINE (283, 122)-(288, 127), 8, BF
+LINE (289, 122)-(294, 127), 8, BF
+LINE (283, 128)-(288, 133), 8, BF
+LINE (283, 134)-(288, 139), 8, BF
+LINE (283, 140)-(288, 145), 8, BF
+LINE (289, 140)-(294, 145), 8, BF
+LINE (307, 104)-(312, 109), 8, BF
+LINE (307, 110)-(312, 115), 8, BF
+LINE (307, 116)-(312, 121), 8, BF
+LINE (307, 122)-(312, 127), 8, BF
+LINE (319, 122)-(324, 127), 8, BF
+LINE (325, 122)-(330, 127), 8, BF
+LINE (307, 128)-(312, 133), 8, BF
+LINE (313, 128)-(318, 133), 8, BF
+LINE (325, 128)-(330, 133), 8, BF
+LINE (307, 134)-(312, 139), 8, BF
+LINE (325, 134)-(330, 139), 8, BF
+LINE (307, 140)-(312, 145), 8, BF
+LINE (325, 140)-(330, 145), 8, BF
+LINE (355, 104)-(360, 109), 8, BF
+LINE (355, 122)-(360, 127), 3, BF
+LINE (355, 128)-(360, 133), 3, BF
+LINE (355, 134)-(360, 139), 10, BF
+LINE (355, 140)-(360, 145), 10, BF
+LINE (385, 110)-(390, 115), 11, BF
+LINE (391, 110)-(396, 115), 11, BF
+LINE (379, 116)-(384, 121), 3, BF
+LINE (397, 116)-(402, 121), 12, BF
+LINE (397, 122)-(402, 127), 12, BF
+LINE (385, 128)-(390, 133), 11, BF
+LINE (391, 128)-(396, 133), 12, BF
+LINE (397, 128)-(402, 133), 12, BF
+LINE (379, 134)-(384, 139), 10, BF
+LINE (397, 134)-(402, 139), 5, BF
+LINE (385, 140)-(390, 145), 5, BF
+LINE (391, 140)-(396, 145), 5, BF
+LINE (403, 140)-(408, 145), 5, BF
+LINE (421, 116)-(426, 121), 9, BF
+LINE (427, 116)-(432, 121), 9, BF
+LINE (433, 116)-(438, 121), 9, BF
+LINE (421, 122)-(426, 127), 9, BF
+LINE (421, 128)-(426, 133), 9, BF
+LINE (427, 128)-(432, 133), 9, BF
+LINE (433, 128)-(438, 133), 9, BF
+LINE (433, 134)-(438, 139), 5, BF
+LINE (421, 140)-(426, 145), 5, BF
+LINE (427, 140)-(432, 145), 5, BF
+LINE (433, 140)-(438, 145), 5, BF
+LINE (199, 164)-(204, 169), 13, BF
+LINE (205, 164)-(210, 169), 13, BF
+LINE (211, 164)-(216, 169), 13, BF
+LINE (217, 164)-(222, 169), 13, BF
+LINE (223, 164)-(228, 169), 13, BF
+LINE (199, 170)-(204, 175), 13, BF
+LINE (199, 176)-(204, 181), 13, BF
+LINE (199, 182)-(204, 187), 13, BF
+LINE (205, 182)-(210, 187), 13, BF
+LINE (211, 182)-(216, 187), 13, BF
+LINE (217, 182)-(222, 187), 13, BF
+LINE (199, 188)-(204, 193), 13, BF
+LINE (199, 194)-(204, 199), 13, BF
+LINE (199, 200)-(204, 205), 13, BF
+LINE (205, 200)-(210, 205), 13, BF
+LINE (211, 200)-(216, 205), 13, BF
+LINE (217, 200)-(222, 205), 13, BF
+LINE (223, 200)-(228, 205), 13, BF
+LINE (253, 164)-(258, 169), 13, BF
+LINE (253, 170)-(258, 175), 13, BF
+LINE (253, 176)-(258, 181), 13, BF
+LINE (241, 182)-(246, 187), 13, BF
+LINE (247, 182)-(252, 187), 13, BF
+LINE (253, 182)-(258, 187), 13, BF
+LINE (235, 188)-(240, 193), 13, BF
+LINE (253, 188)-(258, 193), 13, BF
+LINE (235, 194)-(240, 199), 13, BF
+LINE (253, 194)-(258, 199), 13, BF
+LINE (241, 200)-(246, 205), 13, BF
+LINE (247, 200)-(252, 205), 13, BF
+LINE (253, 200)-(258, 205), 13, BF
+LINE (283, 164)-(288, 169), 13, BF
+LINE (283, 182)-(288, 187), 13, BF
+LINE (283, 188)-(288, 193), 13, BF
+LINE (283, 194)-(288, 199), 13, BF
+LINE (283, 200)-(288, 205), 13, BF
+LINE (319, 170)-(324, 175), 13, BF
+LINE (319, 176)-(324, 181), 13, BF
+LINE (313, 182)-(318, 187), 13, BF
+LINE (319, 182)-(324, 187), 13, BF
+LINE (325, 182)-(330, 187), 13, BF
+LINE (319, 188)-(324, 193), 13, BF
+LINE (319, 194)-(324, 199), 13, BF
+LINE (319, 200)-(324, 205), 13, BF
+LINE (325, 200)-(330, 205), 13, BF
+LINE (355, 164)-(360, 169), 13, BF
+LINE (355, 182)-(360, 187), 13, BF
+LINE (355, 188)-(360, 193), 13, BF
+LINE (355, 194)-(360, 199), 13, BF
+LINE (355, 200)-(360, 205), 13, BF
+LINE (385, 182)-(390, 187), 13, BF
+LINE (391, 182)-(396, 187), 13, BF
+LINE (379, 188)-(384, 193), 13, BF
+LINE (397, 188)-(402, 193), 13, BF
+LINE (379, 194)-(384, 199), 13, BF
+LINE (397, 194)-(402, 199), 13, BF
+LINE (385, 200)-(390, 205), 13, BF
+LINE (391, 200)-(396, 205), 13, BF
+LINE (415, 182)-(420, 187), 13, BF
+LINE (427, 182)-(432, 187), 13, BF
+LINE (433, 182)-(438, 187), 13, BF
+LINE (415, 188)-(420, 193), 13, BF
+LINE (421, 188)-(426, 193), 13, BF
+LINE (433, 188)-(438, 193), 13, BF
+LINE (415, 194)-(420, 199), 13, BF
+LINE (433, 194)-(438, 199), 13, BF
+LINE (415, 200)-(420, 205), 13, BF
+LINE (433, 200)-(438, 205), 13, BF
+LINE (366, 163)-(396, 155.7), 13
+LINE (396, 155.7)-(436, 155.7), 13
+LINE (436, 155.7)-(446, 145.7), 13
+LINE (446, 145.7)-(446, 155.7), 13
+LINE (446, 155.7)-(436, 165.7), 13
+LINE (436, 165.7)-(396, 165.7), 13
+LINE (396, 165.7)-(366, 173), 13
+LINE (366, 173)-(366, 163), 13
+LINE (426, 156)-(396, 166), 13
+PAINT (376, 166), 13, 13
+PAINT (432, 161), 14, 13
+LINE (199, 252)-(202, 255), 9, BF
+LINE (203, 252)-(206, 255), 9, BF
+LINE (198, 256)-(201, 259), 9, BF
+LINE (206, 256)-(209, 259), 9, BF
+LINE (197, 260)-(200, 263), 9, BF
+LINE (201, 260)-(204, 263), 9, BF
+LINE (196, 264)-(199, 267), 9, BF
+LINE (219, 252)-(222, 255), 9, BF
+LINE (227, 252)-(230, 255), 9, BF
+LINE (218, 256)-(221, 259), 9, BF
+LINE (222, 256)-(225, 259), 9, BF
+LINE (230, 256)-(233, 259), 9, BF
+LINE (217, 260)-(220, 263), 9, BF
+LINE (216, 264)-(219, 267), 9, BF
+LINE (249, 244)-(252, 247), 9, BF
+LINE (257, 244)-(260, 247), 9, BF
+LINE (251, 252)-(254, 255), 9, BF
+LINE (255, 252)-(258, 255), 9, BF
+LINE (246, 256)-(249, 259), 9, BF
+LINE (254, 256)-(257, 259), 9, BF
+LINE (245, 260)-(248, 263), 9, BF
+LINE (253, 260)-(256, 263), 9, BF
+LINE (248, 264)-(251, 267), 9, BF
+LINE (252, 264)-(255, 267), 9, BF
+LINE (272, 248)-(275, 251), 9, BF
+LINE (276, 248)-(279, 251), 9, BF
+LINE (280, 248)-(283, 251), 9, BF
+LINE (271, 252)-(274, 255), 9, BF
+LINE (270, 256)-(273, 259), 9, BF
+LINE (274, 256)-(277, 259), 9, BF
+LINE (278, 256)-(281, 259), 9, BF
+LINE (277, 260)-(280, 263), 9, BF
+LINE (268, 264)-(271, 267), 9, BF
+LINE (272, 264)-(275, 267), 9, BF
+LINE (276, 264)-(279, 267), 9, BF
+LINE (296, 248)-(299, 251), 9, BF
+LINE (300, 248)-(303, 251), 9, BF
+LINE (291, 252)-(294, 255), 9, BF
+LINE (303, 252)-(306, 255), 9, BF
+LINE (290, 256)-(293, 259), 9, BF
+LINE (294, 256)-(297, 259), 9, BF
+LINE (298, 256)-(301, 259), 9, BF
+LINE (289, 260)-(292, 263), 9, BF
+LINE (292, 264)-(295, 267), 9, BF
+LINE (296, 264)-(299, 267), 9, BF
+LINE (315, 252)-(318, 255), 9, BF
+LINE (323, 252)-(326, 255), 9, BF
+LINE (327, 252)-(330, 255), 9, BF
+LINE (314, 256)-(317, 259), 9, BF
+LINE (318, 256)-(321, 259), 9, BF
+LINE (326, 256)-(329, 259), 9, BF
+LINE (313, 260)-(316, 263), 9, BF
+LINE (325, 260)-(328, 263), 9, BF
+LINE (312, 264)-(315, 267), 9, BF
+LINE (324, 264)-(327, 267), 9, BF
+LINE (349, 244)-(352, 247), 9, BF
+LINE (348, 248)-(351, 251), 9, BF
+LINE (343, 252)-(346, 255), 9, BF
+LINE (347, 252)-(350, 255), 9, BF
+LINE (351, 252)-(354, 255), 9, BF
+LINE (346, 256)-(349, 259), 9, BF
+LINE (345, 260)-(348, 263), 9, BF
+LINE (344, 264)-(347, 267), 9, BF
+LINE (348, 264)-(351, 267), 9, BF
+LINE (374, 240)-(377, 243), 9, BF
+LINE (371, 252)-(374, 255), 9, BF
+LINE (370, 256)-(373, 259), 9, BF
+LINE (369, 260)-(372, 263), 9, BF
+LINE (368, 264)-(371, 267), 9, BF
+LINE (392, 248)-(395, 251), 9, BF
+LINE (396, 248)-(399, 251), 9, BF
+LINE (387, 252)-(390, 255), 9, BF
+LINE (399, 252)-(402, 255), 9, BF
+LINE (386, 256)-(389, 259), 9, BF
+LINE (390, 256)-(393, 259), 9, BF
+LINE (394, 256)-(397, 259), 9, BF
+LINE (385, 260)-(388, 263), 9, BF
+LINE (388, 264)-(391, 267), 9, BF
+LINE (392, 264)-(395, 267), 9, BF
+LINE (411, 252)-(414, 255), 9, BF
+LINE (419, 252)-(422, 255), 9, BF
+LINE (410, 256)-(413, 259), 9, BF
+LINE (414, 256)-(417, 259), 9, BF
+LINE (422, 256)-(425, 259), 9, BF
+LINE (409, 260)-(412, 263), 9, BF
+LINE (408, 264)-(411, 267), 9, BF
+LINE (445, 244)-(448, 247), 9, BF
+LINE (444, 248)-(447, 251), 9, BF
+LINE (439, 252)-(442, 255), 9, BF
+LINE (443, 252)-(446, 255), 9, BF
+LINE (447, 252)-(450, 255), 9, BF
+LINE (442, 256)-(445, 259), 9, BF
+LINE (441, 260)-(444, 263), 9, BF
+LINE (440, 264)-(443, 267), 9, BF
+LINE (444, 264)-(447, 267), 9, BF
+
+END SUB
+
+SUB Bild2
+LINE (85, 117)-(98, 130), 4, BF
+LINE (99, 117)-(112, 130), 4, BF
+LINE (113, 117)-(126, 130), 4, BF
+LINE (127, 117)-(140, 130), 4, BF
+LINE (84, 131)-(97, 144), 4, BF
+LINE (140, 131)-(153, 144), 4, BF
+LINE (83, 145)-(96, 158), 4, BF
+LINE (139, 145)-(152, 158), 4, BF
+LINE (82, 159)-(95, 172), 4, BF
+LINE (96, 159)-(109, 172), 4, BF
+LINE (110, 159)-(123, 172), 4, BF
+LINE (124, 159)-(137, 172), 4, BF
+LINE (81, 173)-(94, 186), 4, BF
+LINE (109, 173)-(122, 186), 4, BF
+LINE (80, 187)-(93, 200), 4, BF
+LINE (122, 187)-(135, 200), 4, BF
+LINE (79, 201)-(92, 214), 4, BF
+LINE (135, 201)-(148, 214), 4, BF
+LINE (182, 131)-(195, 144), 4, BF
+LINE (196, 131)-(209, 144), 4, BF
+LINE (167, 145)-(180, 158), 4, BF
+LINE (209, 145)-(222, 158), 4, BF
+LINE (208, 159)-(221, 172), 4, BF
+LINE (179, 173)-(192, 186), 4, BF
+LINE (193, 173)-(206, 186), 4, BF
+LINE (207, 173)-(220, 186), 4, BF
+LINE (164, 187)-(177, 200), 4, BF
+LINE (206, 187)-(219, 200), 4, BF
+LINE (177, 201)-(190, 214), 4, BF
+LINE (191, 201)-(204, 214), 4, BF
+LINE (219, 201)-(232, 214), 4, BF
+LINE (267, 117)-(280, 130), 4, BF
+LINE (266, 131)-(279, 144), 4, BF
+LINE (265, 145)-(278, 158), 4, BF
+LINE (264, 159)-(277, 172), 4, BF
+LINE (263, 173)-(276, 186), 4, BF
+LINE (262, 187)-(275, 200), 4, BF
+LINE (261, 201)-(274, 214), 4, BF
+LINE (275, 201)-(288, 214), 4, BF
+LINE (351, 117)-(364, 130), 4, BF
+LINE (350, 131)-(363, 144), 4, BF
+LINE (349, 145)-(362, 158), 4, BF
+LINE (348, 159)-(361, 172), 4, BF
+LINE (347, 173)-(360, 186), 4, BF
+LINE (346, 187)-(359, 200), 4, BF
+LINE (345, 201)-(358, 214), 4, BF
+LINE (359, 201)-(372, 214), 4, BF
+LINE (449, 117)-(462, 130), 4, BF
+LINE (446, 159)-(459, 172), 4, BF
+LINE (445, 173)-(458, 186), 4, BF
+LINE (444, 187)-(457, 200), 4, BF
+LINE (443, 201)-(456, 214), 4, BF
+LINE (517, 145)-(530, 158), 4, BF
+LINE (531, 145)-(544, 158), 4, BF
+LINE (502, 159)-(515, 172), 4, BF
+LINE (544, 159)-(557, 172), 4, BF
+LINE (501, 173)-(514, 186), 4, BF
+LINE (515, 173)-(528, 186), 4, BF
+LINE (529, 173)-(542, 186), 4, BF
+LINE (500, 187)-(513, 200), 4, BF
+LINE (513, 201)-(526, 214), 4, BF
+LINE (527, 201)-(540, 214), 4, BF
+
+END SUB
+
+SUB Bild3
+LINE (330, 210.5556)-(267.7778, 219.4444), 6
+LINE (338.8889, 210.5556)-(392.2222, 219.4444), 6
+LINE (383.3333, 201.6667)-(392.2222, 219.4444), 6
+LINE (338.8889, 192.7778)-(383.3333, 201.6667), 6
+LINE (330, 192.7778)-(276.6667, 201.6667), 6
+LINE (276.6667, 201.6667)-(267.7778, 219.4444), 6
+LINE (267.7778, 219.4444)-(267.7778, 255), 6
+LINE (267.7778, 255)-(276.6667, 263.8889), 6
+LINE (276.6667, 263.8889)-(383.3333, 263.8889), 6
+LINE (392.2222, 255)-(383.3333, 263.8889), 6
+LINE (392.2222, 219.4444)-(392.2222, 255), 6
+LINE (338.8889, 219.4444)-(392.2222, 228.3333), 6
+LINE (330, 219.4444)-(267.7778, 228.3333), 6
+LINE (276.6667, 228.3333)-(383.3333, 255), 6, B
+LINE (276.6667, 228.3333)-(285.5555, 255), 6, B
+LINE (276.6667, 228.3333)-(294.4445, 255), 6, B
+LINE (276.6667, 228.3333)-(303.3333, 255), 6, B
+LINE (276.6667, 228.3333)-(312.2222, 255), 6, B
+LINE (276.6667, 228.3333)-(321.1111, 255), 6, B
+LINE (276.6667, 228.3333)-(330, 255), 6, B
+LINE (276.6667, 228.3333)-(338.8889, 255), 6, B
+LINE (276.6667, 228.3333)-(347.7778, 255), 6, B
+LINE (276.6667, 228.3333)-(356.6667, 255), 6, B
+LINE (276.6667, 228.3333)-(365.5555, 255), 6, B
+LINE (276.6667, 228.3333)-(374.4445, 255), 6, B
+LINE (330, 175)-(258.8889, 183.8889), 6
+LINE (258.8889, 183.8889)-(250, 192.7778), 6
+LINE (250, 192.7778)-(250, 255), 6
+LINE (250, 255)-(258.8889, 263.8889), 6
+LINE (258.8889, 263.8889)-(276.6667, 263.8889), 6
+LINE (276.6667, 263.8889)-(401.1111, 263.8889), 6
+LINE (410, 255)-(401.1111, 263.8889), 6
+LINE (410, 192.7778)-(410, 255), 6
+LINE (401.1111, 183.8889)-(410, 192.7778), 6
+LINE (330, 175)-(401.1111, 183.8889), 6
+LINE (258.8889, 255)-(267.7778, 263.8889), 6
+LINE (401.1111, 255)-(392.2222, 263.8889), 6
+LINE (392.2222, 255)-(410, 255), 6
+LINE (250, 255)-(267.7778, 255), 6
+LINE (276.6667, 263.8889)-(285.5555, 272.7778), 6
+LINE (285.5555, 272.7778)-(374.4445, 272.7778), 6
+LINE (383.3333, 263.8889)-(374.4445, 272.7778), 6
+PAINT (303.3333, 266.5555), 8, 6
+LINE (261, 133)-(261, 183), 6
+LINE (271, 123)-(261, 133), 6
+LINE (271, 123)-(391, 123), 6
+LINE (391, 123)-(401, 133), 6
+LINE (401, 133)-(401, 183), 6
+PAINT (331, 153), 11, 6
+LINE (381, 133)-(391, 143), 9
+LINE (381, 143)-(391, 153), 9
+LINE (385, 264)-(385, 284), 6
+LINE (385, 284)-(387, 285), 6
+LINE (387, 285)-(397, 285), 6
+LINE (398, 264)-(398, 284), 6
+LINE (262, 264)-(262, 284), 6
+LINE (262, 284)-(264, 285), 6
+LINE (264, 285)-(274, 285), 6
+LINE (275, 264)-(275, 284), 6
+PAINT (387, 274), 6, 6
+PAINT (267, 274), 6, 6
+LINE (329, 211)-(339, 211), 6
+LINE (329, 219)-(339, 219), 6
+LINE (329, 193)-(339, 193), 6
+PAINT (379, 213), 6, 6
+PAINT (330, 213.2222), 14, 6
+LINE (333, 201)-(333, 211), 14
+LINE (337, 197)-(333, 201), 14
+LINE (333, 193)-(337, 197), 14
+LINE (333, 193)-(329, 197), 14
+LINE (329, 197)-(333, 201), 14
+PAINT (331, 196), 14, 14
+PSET (333, 192), 6
+PAINT (364, 192), 3, 6
+PAINT (334, 223), 6, 6
+PAINT (314, 262), 7, 6
+PAINT (314, 242), 14, 6
+PAINT (306, 242), 14, 6
+PAINT (277.5, 233), 14, 6
+PAINT (287.5, 233), 14, 6
+PAINT (297.5, 233), 14, 6
+PAINT (322.5, 233), 14, 6
+PAINT (332.5, 233), 14, 6
+PAINT (342.5, 233), 14, 6
+PAINT (352.5, 233), 14, 6
+PAINT (362.5, 233), 14, 6
+PAINT (367.5, 233), 14, 6
+PAINT (377.5, 233), 14, 6
+PAINT (395, 258), 6, 6
+PAINT (405, 258), 6, 6
+PAINT (255, 258), 6, 6
+PAINT (265, 258), 6, 6
+END SUB
+
+SUB Center (m$)
+LOCATE , 40 - (LEN(m$) / 2): PRINT m$
+END SUB
+
+SUB SeaGenerate
+STATIC counter
+
+STATIC LastLeft
+STATIC Breite
+
+counter = counter + 1
+
+N = INT(RND(1) * 2)
+
+IF N = 1 THEN LastLeft = LastLeft + 1
+IF N = 0 THEN LastLeft = LastLeft - 1
+
+IF LastLeft < 41 THEN LastLeft = 41
+IF LastLeft > 70 THEN LastLeft = 70
+
+
+IF counter < SeaLength THEN
+
+IF counter < 20 THEN
+    Breite = Breite + 1
+ELSE
+    N = INT(RND(1) * 2)
+    IF N = 1 THEN Breite = Breite + 1
+    IF N = 0 THEN Breite = Breite - 1
+END IF
+
+IF Breite + LastLeft > 78 THEN Breite = 78 - LastLeft
+IF Breite < 10 THEN Breite = Breite + 1
+
+COLOR 1, 10: LOCATE , LastLeft: PRINT STRING$(Breite, "Ы");
+
+ELSE
+
+Breite = Breite - 1
+IF Breite > 0 THEN COLOR 1, 10: LOCATE , LastLeft: PRINT STRING$(Breite, "Ы");  ELSE stopp = 1
+
+END IF
+
+
+END SUB
+

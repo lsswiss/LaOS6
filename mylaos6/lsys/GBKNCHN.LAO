@@ -1,0 +1,276 @@
+'Knochenjagd im Weltraum
+'Release-Version 1.0, Juli 1998
+'Copyright (C) Urs Langmeier, BCO 1998
+
+'Alle Urheber- und Leistungsschutzrechte vorbehalten. Der Code darf nicht
+'unerlaubt kopiert oder ge„ndert werden.
+
+'Rundum-Erneuerung: 28.11.1999
+'Umfunktioniert in Felsenjagd!
+
+DECLARE SUB Schiesse ()
+DECLARE SUB KnochenRemove ()
+DECLARE SUB Knochen (x!, y!)
+DECLARE SUB Starset ()
+DECLARE SUB StarsMove (Distance!)
+DECLARE SUB StarsRemove ()
+DECLARE SUB Rakete (x!, y!)
+DECLARE SUB RaketeRemove ()
+SCREEN 9 '319*199
+RANDOMIZE TIMER
+
+
+CONST AnzahlSterne = 100
+CONST xtotal = 640
+CONST ytotal = 350
+CONST HGF = 0'Setzt die Hintergrundfarbe
+DIM SHARED Stars(1 TO AnzahlSterne, 2)
+DIM SHARED LChange AS INTEGER 'Z„hler fr den Wechsel des Landes (Level)
+DIM SHARED gefangen AS INTEGER, Level AS INTEGER
+
+VIEW
+COLOR 15, 0
+CLS
+
+DIM SHARED Player$
+LINE INPUT "Bitte Namen eingeben: "; Player$
+Player$ = LEFT$(Player$, 50)
+IF Player$ = "" THEN Player$ = "Jemand ohne Namen"
+1
+Level = 1
+'Calculate Computerspeed:
+t = TIMER
+DO
+FOR i = 1 TO 1000: NEXT
+LOOP UNTIL TIMER - t > 0
+neg1 = (TIMER - t) * 30
+
+az = TIMER
+r = 0
+
+    DO
+        FOR i = 1 TO 1000: NEXT
+        nz = TIMER - az
+        r = r + 1
+    LOOP WHILE nz = 0
+
+pauseloops = .02 * (1000 * r) / nz
+
+
+501
+IF neg1 > 20 THEN neg = 20
+neg = neg1
+
+ky = -20
+
+x = 310
+y = 200
+
+Starset
+
+SCREEN 9, , 1, 0
+DO
+CLS
+StarsMove (2)
+
+IF Kn = 1 THEN
+    Knochen kx, ky
+END IF
+
+Rakete x, y
+PCOPY 1, 0
+i = 0
+
+FOR i = 1 TO pauseloops: NEXT
+
+
+kbd$ = INKEY$
+SELECT CASE kbd$
+CASE CHR$(27): CHAIN "c:\laos\run.bas"
+CASE CHR$(0) + "K": neg = neg1 * (p1 + 1): xneg = -neg: p1 = p1 + 1: p2 = 0: p3 = 0: p4 = 0
+CASE CHR$(0) + "M": neg = neg1 * (p2 + 1): xneg = neg: p2 = p2 + 2: p1 = 0: p3 = 0: p4 = 0
+CASE CHR$(32), CHR$(13): p1 = 0: p2 = 0: p3 = 0: p4 = 0: Schiesse
+'COLOR 9: LOCATE 2, LEN(Player$) + 3: xneg = 0: yneg = 0
+CASE CHR$(0) + "H": neg = neg1 * (p3 + 1): yneg = -neg: p3 = p3 + 1: p1 = 0: p2 = 0: p4 = 0
+CASE CHR$(0) + "P": neg = neg1 * (p4 + 1): yneg = neg: p4 = p4 + 1: p1 = 0: p2 = 0: p3 = 0
+CASE ELSE: IF kbd$ <> "" THEN xneg = 0: yneg = 0: p1 = 0: p2 = 0: p3 = 0: p4 = 0
+END SELECT
+
+x = x + xneg
+y = y + yneg
+IF x > 630 THEN x = 630: xneg = 0
+IF x < -10 THEN x = -10: xneg = 0
+IF y < 20 THEN y = 20: yneg = 0
+IF y > 320 THEN y = 320: yneg = 0
+
+SOUND 37, .2
+zf = INT(RND * 100 / Level) + 1
+IF zf = 6 AND Kn = 0 THEN Kn = 1: kx = INT(RND * 590): ky = -20 - Level
+
+IF Kn = 1 THEN
+ky = ky + Level
+Knochen kx, ky
+
+IF x + 10 > kx AND x + 10 < kx + 58 AND y <= ky + 32 AND y >= ky THEN
+FOR u = 1 TO 50
+SOUND 50 + u * 2, .1
+CIRCLE (x, y), u, INT(RND * 15) + 1
+NEXT
+PCOPY 1, 0
+DO: LOOP UNTIL INKEY$ = ""
+a$ = INPUT$(1)
+GOTO 1
+
+END IF
+IF ky > 350 THEN Kn = 0: ky = -19
+END IF
+LOOP
+
+CHAIN "c:\laos\run.bas"
+
+SUB Knochen (x, y)
+SHARED kx, ky
+x = kx
+y = ky
+
+LINE (7.75 + x, 20.5 + y)-(15.75 + x, 31 + y), 8
+LINE (15.75 + x, 31 + y)-(31 + x, 30 + y), 8
+LINE (31 + x, 30 + y)-(37 + x, 31.75 + y), 8
+LINE (37 + x, 31.75 + y)-(46.25 + x, 27.5 + y), 8
+LINE (46.25 + x, 27.5 + y)-(49.5 + x, 23.5 + y), 8
+LINE (49.5 + x, 23.5 + y)-(52.75 + x, 17.5 + y), 8
+LINE (52.75 + x, 17.5 + y)-(45.75 + x, 9.25 + y), 8
+LINE (45.75 + x, 9.25 + y)-(39.25 + x, 6.5 + y), 8
+LINE (39.25 + x, 6.5 + y)-(33.5 + x, 0 + y), 8
+LINE (33.5 + x, 0 + y)-(29.25 + x, -.25 + y), 8
+LINE (29.25 + x, -.25 + y)-(21.5 + x, 2 + y), 8
+LINE (21.5 + x, 2 + y)-(12.25 + x, 6.5 + y), 8
+LINE (12.25 + x, 6.5 + y)-(11 + x, 9.25 + y), 8
+LINE (11 + x, 9.25 + y)-(9.5 + x, 12.25 + y), 8
+LINE (9.5 + x, 12.25 + y)-(1.75 + x, 14 + y), 8
+LINE (1.75 + x, 14 + y)-(-.75 + x, 18 + y), 8
+LINE (-.75 + x, 18 + y)-(4.25 + x, 22.5 + y), 8
+LINE (4.25 + x, 22.5 + y)-(7 + x, 24.5 + y), 8
+LINE (7 + x, 24.5 + y)-(9.5 + x, 22.25 + y), 8
+LINE (9.5 + x, 22.25 + y)-(13.5 + x, 22.25 + y), 8
+LINE (13.5 + x, 22.25 + y)-(30.25 + x, 24 + y), 8
+LINE (30.25 + x, 24 + y)-(42 + x, 21.75 + y), 8
+LINE (42 + x, 21.75 + y)-(41.75 + x, 17.75 + y), 8
+LINE (41.75 + x, 17.75 + y)-(30 + x, 9 + y), 8
+LINE (30 + x, 9 + y)-(30.25 + x, 6.5 + y), 8
+LINE (30.25 + x, 6.5 + y)-(16.25 + x, 12 + y), 8
+LINE (16.25 + x, 12 + y)-(11.5 + x, 16.5 + y), 8
+LINE (11.5 + x, 16.5 + y)-(5.75 + x, 17.5 + y), 8
+LINE (5.75 + x, 17.5 + y)-(18 + x, 18 + y), 8
+PAINT (21.5 + x, 20.25 + y), 7, 8
+LINE (22 + x, 14 + y)-(29 + x, 22 + y), 8
+LINE (38 + x, 26 + y)-(46 + x, 17 + y), 8
+
+END SUB
+
+SUB Rakete (x, y)
+LINE (x + 0, y + 20)-(x + 7, y + 0), 7
+LINE (x + 7, y + 0)-(x + 9, y + 6), 7
+LINE (x + 9, y + 6)-(x + 12, y + 0), 7
+LINE (x + 12, y + 0)-(x + 17, y + 20), 7
+LINE (x + 17, y + 20)-(x + 13, y + 20), 7
+LINE (x + 13, y + 20)-(x + 12, y + 15), 7
+LINE (x + 12, y + 15)-(x + 6, y + 15), 7
+LINE (x + 6, y + 15)-(x + 4, y + 20), 7
+LINE (x + 4, y + 20)-(x + 1, y + 20), 7
+PAINT (x + 10, y + 13), 8, 7
+PAINT (x + 8, y + 13), 8, 7
+LINE (x + 3, y + 21)-(x + 2, y + 25), 12
+LINE (x + 0, y + 21)-(x + 1, y + 23), 12
+LINE (x + 14, y + 21)-(x + 13, y + 23), 12
+LINE (x + 16, y + 22)-(x + 17, y + 25), 12
+LINE (x + 15, y + 25)-(x + 15, y + 22), 12
+LINE (x + 16, y + 21)-(x + 16, y + 24), 14
+LINE (x + 0, y + 23)-(x + 2, y + 21), 14
+
+LOCATE 1, 1: COLOR 13: PRINT Player$; ":"
+COLOR 9
+LOCATE 1, LEN(Player$) + 2: PRINT gefangen; "Felsen"
+LOCATE 2, LEN(Player$) + 3: PRINT "Level"; Level
+
+END SUB
+
+SUB Schiesse
+SHARED x, y, xneg, yneg
+SHARED Kn, kx, ky
+DO: LOOP UNTIL INKEY$ = ""
+
+u = y
+FOR i = 2000 TO 1000 STEP -200
+
+x = x + xneg
+y = y + yneg
+IF x > 630 THEN x = 630: xneg = 0
+IF x < -10 THEN x = -10: xneg = 0
+IF y < 0 THEN y = 0: yneg = 0
+IF y > 320 THEN y = 320: yneg = 0
+
+CLS
+StarsMove (2)
+u = u - 50
+LINE (x + 10, y)-(x + 10, u), 15, , u
+
+SOUND i, 1
+
+IF Kn = 1 THEN ky = ky + Level: Knochen kx, ky
+Rakete x, y
+PCOPY 1, 0
+
+NEXT i
+
+abgeschossen:
+
+IF x + 10 > kx AND x + 10 < kx + 50 AND ky <= y THEN
+IF Kn = 1 THEN
+LINE (kx + 6, ky + 6)-(kx + 20, ky + 16), 14
+LINE (kx + 7, ky + 7)-(kx + 21, ky + 17), 14
+
+LINE (kx + 6, ky + 6)-(kx + 20, ky + 16), 0
+LINE (kx + 7, ky + 7)-(kx + 21, ky + 17), 0
+
+gefangen = gefangen + 1
+ky = 0
+Kn = 0
+LChange = LChange + 1
+IF LChange >= 6 THEN
+FOR i = 1 TO 5: PLAY "mb t255 l64 o4 ceg>c": NEXT
+Level = Level + 1: LChange = 0
+END IF
+END IF
+
+END IF
+
+END SUB
+
+SUB Starset
+FOR M = 1 TO AnzahlSterne
+Stars(M, 0) = INT(RND * xtotal) 'x-set
+Stars(M, 1) = INT(RND * ytotal) 'y-set
+Stars(M, 2) = INT(RND * 15) + 1 'color-set
+IF Stars(M, 2) = 8 THEN Stars(M, 2) = 15
+NEXT M
+END SUB
+
+SUB StarsMove (Distance)
+FOR M = 1 TO AnzahlSterne
+Stars(M, 1) = Stars(M, 1) + Distance 'verschiebe den Stern um die
+                                     'angegebene Distanz
+IF Stars(M, 1) > ytotal THEN 'Stern neu setzen
+Stars(M, 0) = INT(RND * xtotal)
+Stars(M, 1) = 0  'INT(RND * ytotal)
+Stars(M, 2) = INT(RND * 15) + 1
+IF Stars(M, 2) = 8 THEN Stars(M, 2) = 15
+
+END IF
+
+'IF POINT(Stars(M, 0), Stars(M, 1)) = HGF THEN
+PSET (Stars(M, 0), Stars(M, 1)), Stars(M, 2)
+'END IF
+NEXT M
+END SUB
+

@@ -1,0 +1,1712 @@
+DECLARE FUNCTION MainMenu! ()
+DECLARE SUB ShowTopScore ()
+DECLARE SUB SaveScore (Wert AS INTEGER, Name$)
+DECLARE SUB GetHighScore ()
+DECLARE FUNCTION IsTopScore% (Wert%)
+DECLARE FUNCTION InputBox$ (capt$, l%)
+DECLARE FUNCTION NameOf$ (p$, laenge%)
+DECLARE FUNCTION Score$ (Index!)
+DECLARE FUNCTION GoPLAY$ (p$)
+DECLARE SUB DrawObjectArea ()
+DECLARE SUB DrawPlayArea ()
+DECLARE SUB DrawMauerWenn (x%, y%)
+'
+'Miteworld - (C) 1999 by Urs Langmeier
+'   grafisches Schlangenspiel
+'
+'Alle Rechte vorbehalten. Nicht kopieren. Strengstes Copyright!
+
+'
+'24.11.1999: Hab am Abend schnell die Grafik gemacht. (DrawPlayArea),
+'            und alle Objekte im 3D-Studio 3 gezeichnet.
+'25.11.1999: Spiel geht
+'26.11.1999: Abend: Schnellerer Aufbau bei Komplexen Szenen
+' 5.12.1999: Tastaturstapel wird jetzt auf 2 TastendrÅcke beschrÑnkt.
+'26.01.2000: HighScore-Liste und Hauptmenu eingebaut.
+
+DECLARE SUB RandomSetObjects (Standard%, Add%, MaxHearts%, MaxGifts%)
+DECLARE SUB ActivateMenu (Nr%)
+DECLARE SUB ShowPicture (Bild$)
+DECLARE SUB Menu ()
+DECLARE SUB GetPlusFutter ()
+DECLARE SUB Plus (x%, y%, o%, z%)
+DECLARE SUB MsgBox (a!, B!, c!, d!, Text AS STRING, waiting AS INTEGER)
+DECLARE SUB Center (Text AS STRING, waiting%)
+DECLARE SUB GameOverPlane ()
+DECLARE SUB DrawCorpSkelett (x!, y!)
+DECLARE SUB GetValableDirection ()
+DECLARE SUB GameOver (Grund%)
+DECLARE SUB GetSnack (x%, y%)
+DECLARE SUB PlaySound (SoundNr%)
+DECLARE SUB SwapHead (x%, y%)
+DECLARE SUB PlayGame ()
+DECLARE SUB MoveNibbel (ext%)
+DECLARE SUB DrawAeri (x!, y!)
+DECLARE SUB DrawApfel (x!, y!)
+DECLARE SUB DrawGift (x!, y!)
+DECLARE SUB DrawHerz (x!, y!)
+DECLARE SUB DrawInsekt (x!, y!)
+DECLARE SUB DrawMauer (x!, y!)
+DECLARE SUB KopfDown (x!, y!)
+DECLARE SUB KopfLeft (x!, y!)
+DECLARE SUB KopfUp (x!, y!)
+DECLARE SUB Set (x%, y%, Objekt%)
+DECLARE SUB DrawKoerper (x!, y!)
+DECLARE SUB KopfRight (x!, y!)
+DECLARE SUB DrawScores ()
+DECLARE SUB InitializeLevel (Land AS INTEGER)
+
+ON ERROR GOTO errorhandler
+SCREEN 9
+
+DIM SHARED Joules AS INTEGER, Leben AS INTEGER, Land AS INTEGER, Alter AS INTEGER
+DIM SHARED Feld(1 TO 31, 1 TO 15) AS INTEGER, Break AS INTEGER, eat AS INTEGER
+DIM SHARED KopfX AS INTEGER, KopfY AS INTEGER, Direction AS INTEGER, plusnow AS INTEGER
+DIM SHARED NewLevel AS INTEGER 'Neues Land nach NewLevel Futter
+DIM SHARED SecondTry AS INTEGER 'Zweiter Versuch, ein Land zu durchlaufen. (Nach Lebensverlust, wird dies auf True gesetzt.)
+DIM SHARED FirstJoules AS INTEGER 'Sichert den Kalorienwert des ersten Versuchs.
+DIM SHARED HardMode AS SINGLE 'Die Schwierigkeitsstufe: Pause in Sekunden zwischen den Bewegungen.
+
+TYPE tPlus
+    x AS INTEGER
+    y AS INTEGER
+    o AS INTEGER 'Objekt
+    z AS INTEGER 'nach "Zeit": einblenden nach z gegessenen Objekten
+END TYPE
+
+DIM SHARED PlusFutter(10) AS tPlus
+DIM SHARED Refresh%, SeinPlatz AS INTEGER, GameEnd AS INTEGER
+
+CONST Default = 0, Mauer = 14, Schwanz = 15, Blank = 16, Nothing = 17
+CONST HeadLeft = 1, HeadRight = 2, HeadUp = 3, HeadDown = 4
+CONST CorpLeft = 5, CorpRight = 6, CorpUp = 7, CorpDown = 8
+
+CONST Insekt = 9, Apfel = 10, Aeri = 11, Herz = 12, Gift = 13
+
+CONST sndGameOver = 1
+
+CONST MaxScore = 10
+CONST HighScoreFile = "wurmwelt.hsc"
+
+1
+Leben = 3
+Joules = 200
+Land = 1
+
+
+Menu
+COLOR 14, 34
+
+RANDOMIZE TIMER
+
+
+InitializeLevel Land
+
+Refresh% = -1
+DrawPlayArea
+
+Center "    Guten Appetit!    ", 1
+361
+PlayGame
+
+317
+a% = MainMenu
+SELECT CASE a%
+CASE 1: SCREEN 9, , 0, 0: CHAIN "c:\laos\run.bas"
+CASE 2: IF GameEnd THEN 1 ELSE Refresh% = -1: GOTO 361
+CASE 3: ShowTopScore
+END SELECT
+GOTO 317
+
+
+
+errorhandler:
+IF ERR = 9 THEN GameOver Mauer
+RESUME NEXT
+
+CHAIN "c:\laos\run.bas"
+
+SUB ActivateMenu (Nr%)
+LINE (11, 250)-(179, 318), 13, B
+LINE (201, 250)-(379, 318), 13, B
+LINE (401, 250)-(629, 318), 13, B
+LINE (12, 251)-(178, 317), 13, B
+LINE (202, 251)-(378, 317), 13, B
+LINE (402, 251)-(628, 317), 13, B
+
+SELECT CASE Nr%
+CASE 1: LINE (11, 250)-(179, 318), 14, B
+        LINE (12, 251)-(178, 317), 14, B
+
+CASE 2: LINE (201, 250)-(379, 318), 14, B
+        LINE (202, 251)-(378, 317), 14, B
+
+CASE 3: LINE (401, 250)-(629, 318), 14, B
+        LINE (402, 251)-(628, 317), 14, B
+END SELECT
+END SUB
+
+SUB Center (Text AS STRING, waiting%)
+a = CINT((80 - LEN(Text)) / 2)
+B = 9
+c = a + LEN(Text)
+d = 10
+MsgBox a, B, c, d, Text, waiting%
+
+END SUB
+
+SUB DrawAeri (x, y)
+LINE (8 + x, 15.015 + y)-(13 + x, 1.499939E-02 + y), 6
+LINE (6.5 + x, 17.015 + y)-(6 + x, 15.015 + y), 6
+LINE (6 + x, 15.015 + y)-(5 + x, 14.515 + y), 6
+LINE (5 + x, 14.515 + y)-(4.5 + x, 13.515 + y), 6
+LINE (4.5 + x, 13.515 + y)-(4.5 + x, 15.515 + y), 6
+LINE (4.5 + x, 15.515 + y)-(6 + x, 17.015 + y), 6
+LINE (12.26144 + x, 14.07038 + y)-(10.70471 + x, 15.4219 + y), 6
+LINE (10.70471 + x, 15.4219 + y)-(9.598785 + x, 15.2579 + y), 6
+LINE (9.598785 + x, 15.2579 + y)-(8.615631 + x, 15.79026 + y), 6
+LINE (8.615631 + x, 15.79026 + y)-(9.762787 + x, 14.15195 + y), 6
+LINE (9.762787 + x, 14.15195 + y)-(11.85187 + x, 13.7836 + y), 6
+LINE (11.85187 + x, 13.7836 + y)-(12.26144 + x, 14.07038 + y), 6
+LINE (10 + x, 7.014999 + y)-(9.5 + x, 5.014999 + y), 6
+LINE (9.5 + x, 5.014999 + y)-(8.5 + x, 4.514999 + y), 6
+LINE (8.5 + x, 4.514999 + y)-(8 + x, 3.514999 + y), 6
+LINE (8 + x, 3.514999 + y)-(8 + x, 5.514999 + y), 6
+LINE (8 + x, 5.514999 + y)-(9.5 + x, 7.014999 + y), 6
+LINE (9.5 + x, 7.014999 + y)-(10 + x, 7.014999 + y), 6
+LINE (11 + x, 3.514999 + y)-(10.5 + x, 1.514999 + y), 6
+LINE (10.5 + x, 1.514999 + y)-(9.5 + x, 1.014999 + y), 6
+LINE (9.5 + x, 1.014999 + y)-(9 + x, 1.499939E-02 + y), 6
+LINE (9 + x, 1.499939E-02 + y)-(9 + x, 2.014999 + y), 6
+LINE (9 + x, 2.014999 + y)-(10.5 + x, 3.514999 + y), 6
+LINE (10.5 + x, 3.514999 + y)-(11 + x, 3.514999 + y), 6
+LINE (8 + x, 14.015 + y)-(7.5 + x, 12.015 + y), 6
+LINE (7.5 + x, 12.015 + y)-(6.5 + x, 11.515 + y), 6
+LINE (6.5 + x, 11.515 + y)-(6 + x, 10.515 + y), 6
+LINE (6 + x, 10.515 + y)-(6 + x, 12.515 + y), 6
+LINE (6 + x, 12.515 + y)-(7.5 + x, 14.015 + y), 6
+LINE (7.5 + x, 14.015 + y)-(8 + x, 14.015 + y), 6
+LINE (9 + x, 10.515 + y)-(8.5 + x, 8.514999 + y), 6
+LINE (8.5 + x, 8.514999 + y)-(7.5 + x, 8.014999 + y), 6
+LINE (7.5 + x, 8.014999 + y)-(7 + x, 7.014999 + y), 6
+LINE (7 + x, 7.014999 + y)-(7 + x, 9.014999 + y), 6
+LINE (7 + x, 9.014999 + y)-(8.5 + x, 10.515 + y), 6
+LINE (8.5 + x, 10.515 + y)-(9 + x, 10.515 + y), 6
+LINE (14.38474 + x, 7.451603 + y)-(12.828 + x, 8.803116 + y), 6
+LINE (12.828 + x, 8.803116 + y)-(11.72205 + x, 8.639118 + y), 6
+LINE (11.72205 + x, 8.639118 + y)-(10.73889 + x, 9.171482 + y), 6
+LINE (10.73889 + x, 9.171482 + y)-(11.88605 + x, 7.53318 + y), 6
+LINE (11.88605 + x, 7.53318 + y)-(13.97516 + x, 7.164818 + y), 6
+LINE (13.97516 + x, 7.164818 + y)-(14.38474 + x, 7.451603 + y), 6
+LINE (13.19638 + x, 10.89221 + y)-(11.63965 + x, 12.24373 + y), 6
+LINE (11.63965 + x, 12.24373 + y)-(10.53369 + x, 12.07973 + y), 6
+LINE (10.53369 + x, 12.07973 + y)-(9.550537 + x, 12.61209 + y), 6
+LINE (9.550537 + x, 12.61209 + y)-(10.69769 + x, 10.97379 + y), 6
+LINE (10.69769 + x, 10.97379 + y)-(12.78677 + x, 10.60542 + y), 6
+LINE (12.78677 + x, 10.60542 + y)-(13.19638 + x, 10.89221 + y), 6
+LINE (16.76144 + x, .570385 + y)-(15.20471 + x, 1.921902 + y), 6
+LINE (15.20471 + x, 1.921902 + y)-(14.09879 + x, 1.757904 + y), 6
+LINE (14.09879 + x, 1.757904 + y)-(13.11563 + x, 2.290264 + y), 6
+LINE (13.11563 + x, 2.290264 + y)-(14.26279 + x, .6519547 + y), 6
+LINE (14.26279 + x, .6519547 + y)-(16.35187 + x, .283596 + y), 6
+LINE (16.35187 + x, .283596 + y)-(16.76144 + x, .570385 + y), 6
+LINE (15.57309 + x, 4.010994 + y)-(14.01636 + x, 5.362511 + y), 6
+LINE (14.01636 + x, 5.362511 + y)-(12.91043 + x, 5.198509 + y), 6
+LINE (12.91043 + x, 5.198509 + y)-(11.92728 + x, 5.730873 + y), 6
+LINE (11.92728 + x, 5.730873 + y)-(13.07443 + x, 4.092571 + y), 6
+LINE (13.07443 + x, 4.092571 + y)-(15.16351 + x, 3.724205 + y), 6
+LINE (15.16351 + x, 3.724205 + y)-(15.57309 + x, 4.010994 + y), 6
+LINE (12 + x, .5149994 + y)-(12 + x, 3.014999 + y), 6
+LINE (7 + x, 17 + y)-(12 + x, 2.5 + y), 6
+LINE (7 + x, 17.5 + y)-(12.5 + x, 1.5 + y), 14
+END SUB
+
+SUB DrawApfel (x, y)
+LINE (8.999992 + x, 20.1825 + y)-(6.499992 + x, 18.9325 + y), 12
+LINE (6.499992 + x, 18.9325 + y)-(5.249992 + x, 17.6825 + y), 12
+LINE (5.249992 + x, 17.6825 + y)-(3.999992 + x, 16.4325 + y), 12
+LINE (3.999992 + x, 16.4325 + y)-(3.999992 + x, 12.6825 + y), 12
+LINE (3.999992 + x, 12.6825 + y)-(5.249992 + x, 10.1825 + y), 12
+LINE (5.249992 + x, 10.1825 + y)-(6.499992 + x, 8.932501 + y), 12
+LINE (6.499992 + x, 8.932501 + y)-(8.999992 + x, 8.932501 + y), 12
+LINE (8.999992 + x, 8.932501 + y)-(10.24999 + x, 10.1825 + y), 12
+LINE (10.24999 + x, 10.1825 + y)-(12.74999 + x, 8.932501 + y), 12
+LINE (12.74999 + x, 8.932501 + y)-(13.99999 + x, 8.932501 + y), 12
+LINE (13.99999 + x, 8.932501 + y)-(15.24999 + x, 10.1825 + y), 12
+LINE (16.49999 + x, 12.6825 + y)-(16.49999 + x, 12.6825 + y), 12
+LINE (16.49999 + x, 12.6825 + y)-(15.24999 + x, 10.1825 + y), 12
+LINE (16.49999 + x, 12.6825 + y)-(16.49999 + x, 15.1825 + y), 12
+LINE (16.49999 + x, 15.1825 + y)-(15.24999 + x, 17.6825 + y), 12
+LINE (15.24999 + x, 17.6825 + y)-(12.74999 + x, 20.1825 + y), 12
+LINE (12.74999 + x, 20.1825 + y)-(10.24999 + x, 20.1825 + y), 12
+LINE (10.24999 + x, 20.1825 + y)-(8.999992 + x, 20.1825 + y), 12
+PAINT (10.24999 + x, 17.6825 + y), 12, 12
+LINE (12.74999 + x, 18.9325 + y)-(15.24999 + x, 15.1825 + y), 2
+LINE (15.24999 + x, 15.1825 + y)-(15.24999 + x, 12.6825 + y), 2
+LINE (15.24999 + x, 12.6825 + y)-(13.99999 + x, 10.1825 + y), 2
+LINE (13.99999 + x, 10.1825 + y)-(11.49999 + x, 11.4325 + y), 2
+LINE (11.49999 + x, 11.4325 + y)-(11.49999 + x, 13.9325 + y), 2
+LINE (11.49999 + x, 13.9325 + y)-(11.49999 + x, 17.6825 + y), 2
+LINE (11.49999 + x, 17.6825 + y)-(8.999992 + x, 18.9325 + y), 2
+LINE (8.999992 + x, 18.9325 + y)-(12.74999 + x, 18.9325 + y), 2
+PAINT (13.99999 + x, 13.9325 + y), 2, 2
+LINE (10.24999 + x, 10.1825 + y)-(10.24999 + x, 6.432503 + y), 2
+LINE (10.24999 + x, 6.432503 + y)-(11.49999 + x, 1.432503 + y), 2
+LINE (11.49999 + x, 1.432503 + y)-(12.74999 + x, 1.432503 + y), 2
+LINE (12.74999 + x, 1.432503 + y)-(11.24999 + x, 7.432503 + y), 2
+LINE (11.24999 + x, 7.432503 + y)-(11.24999 + x, 10.4325 + y), 2
+LINE (11.24999 + x, 10.4325 + y)-(9.749992 + x, 10.4325 + y), 2
+PAINT (11.24999 + x, 4.432503 + y), 2, 2
+LINE (10.24999 + x, 5.932503 + y)-(8.999992 + x, 2.182503 + y), 2
+LINE (8.999992 + x, 2.182503 + y)-(3.999992 + x, -.3174973 + y), 2
+LINE (3.999992 + x, -.3174973 + y)-(3.999992 + x, 3.432503 + y), 2
+LINE (3.999992 + x, 3.432503 + y)-(5.249992 + x, 4.682503 + y), 2
+LINE (5.249992 + x, 4.682503 + y)-(7.749992 + x, 5.932503 + y), 2
+LINE (7.749992 + x, 5.932503 + y)-(10.24999 + x, 5.932503 + y), 2
+PAINT (7.749992 + x, 3.432503 + y), 2, 2
+LINE (11.99999 + x, 1.73 + y)-(9.999992 + x, 7.73 + y), 2
+END SUB
+
+SUB DrawCorpSkelett (x, y)
+COLOR 15
+CIRCLE (10 + x, 10 + y), 10, , , , 1
+PAINT (10 + x, 10 + y), 7, 15
+LINE (15 + x, 18.4375 + y)-(16.875 + x, 11.5625 + y)
+LINE (16.875 + x, 11.5625 + y)-(16.875 + x, 9.0625 + y)
+LINE (16.875 + x, 9.0625 + y)-(16.25 + x, 6.5625 + y)
+LINE (16.25 + x, 6.5625 + y)-(13.75 + x, 2.8125 + y)
+LINE (10 + x, .3125 + y)-(13.75 + x, 2.8125 + y)
+LINE (10 + x, .3125 + y)-(10.625 + x, 2.8125 + y)
+LINE (10.625 + x, 2.8125 + y)-(11.25 + x, 7.1875 + y)
+LINE (11.25 + x, 7.1875 + y)-(11.25 + x, 11.5625 + y)
+LINE (11.25 + x, 15.3125 + y)-(10 + x, 19.6875 + y)
+LINE (11.25 + x, 15.3125 + y)-(11.25 + x, 11.5625 + y)
+LINE (10 + x, .3125 + y)-(7.5 + x, 2.8125 + y)
+LINE (7.5 + x, 2.8125 + y)-(6.25 + x, 7.1875 + y)
+LINE (6.25 + x, 7.1875 + y)-(6.25 + x, 9.6875 + y)
+LINE (6.25 + x, 9.6875 + y)-(6.875 + x, 14.6875 + y)
+LINE (6.875 + x, 14.6875 + y)-(8.75 + x, 19.6875 + y)
+LINE (3.75 + x, 17.1875 + y)-(2.5 + x, 12.8125 + y)
+LINE (2.5 + x, 12.8125 + y)-(2.5 + x, 8.4375 + y)
+LINE (2.5 + x, 8.4375 + y)-(3.125 + x, 5.9375 + y)
+LINE (3.125 + x, 5.9375 + y)-(6.25 + x, 2.1875 + y)
+LINE (6.25 + x, 2.1875 + y)-(10 + x, .3125 + y)
+LINE (0 + x, 10.3125 + y)-(3.75 + x, 12.8125 + y)
+LINE (3.75 + x, 12.8125 + y)-(10 + x, 14.0625 + y)
+LINE (10 + x, 14.0625 + y)-(13.75 + x, 13.4375 + y)
+LINE (13.75 + x, 13.4375 + y)-(17.5 + x, 12.1875 + y)
+LINE (17.5 + x, 12.1875 + y)-(19.375 + x, 11.5625 + y)
+LINE (18.75 + x, 7.1875 + y)-(13.125 + x, 9.0625 + y)
+LINE (13.125 + x, 9.0625 + y)-(10 + x, 9.0625 + y)
+LINE (10 + x, 9.0625 + y)-(5.625 + x, 8.4375 + y)
+LINE (5.625 + x, 8.4375 + y)-(1.25 + x, 5.9375 + y)
+LINE (3.75 + x, 2.8125 + y)-(6.875 + x, 4.0625 + y)
+LINE (6.875 + x, 4.0625 + y)-(8.75 + x, 4.0625 + y)
+LINE (8.75 + x, 4.0625 + y)-(8.75 + x, 5.3125 + y)
+LINE (8.75 + x, 5.3125 + y)-(9.375 + x, 19.0625 + y)
+LINE (9.375 + x, 19.0625 + y)-(9.375 + x, 4.0625 + y)
+LINE (10 + x, 4.0625 + y)-(9.375 + x, 19.0625 + y)
+LINE (8.75 + x, 4.0625 + y)-(10 + x, 4.0625 + y)
+LINE (10 + x, 4.0625 + y)-(12.5 + x, 4.0625 + y)
+LINE (12.5 + x, 4.0625 + y)-(15.625 + x, 2.8125 + y)
+END SUB
+
+SUB DrawGift (x, y)
+LINE (6.75 + x, 5.2575 + y)-(5.5 + x, 5.2575 + y), 8
+PSET (5.5 + x, 5.2575 + y), 8
+LINE (5.5 + x, 5.2575 + y)-(4.25 + x, 6.5075 + y), 8
+LINE (4.25 + x, 6.5075 + y)-(4.25 + x, 7.7575 + y), 8
+LINE (4.25 + x, 7.7575 + y)-(5.5 + x, 9.0075 + y), 8
+LINE (5.5 + x, 9.0075 + y)-(4.25 + x, 10.2575 + y), 8
+LINE (4.25 + x, 10.2575 + y)-(4.25 + x, 11.5075 + y), 8
+LINE (4.25 + x, 11.5075 + y)-(5.5 + x, 12.7575 + y), 8
+LINE (5.5 + x, 12.7575 + y)-(4.25 + x, 14.0075 + y), 8
+LINE (4.25 + x, 14.0075 + y)-(4.25 + x, 15.2575 + y), 8
+LINE (4.25 + x, 15.2575 + y)-(4.25 + x, 16.5075 + y), 8
+LINE (4.25 + x, 16.5075 + y)-(5.5 + x, 17.7575 + y), 8
+LINE (5.5 + x, 17.7575 + y)-(14.25 + x, 17.7575 + y), 8
+LINE (14.25 + x, 17.7575 + y)-(15.5 + x, 16.5075 + y), 8
+LINE (15.5 + x, 16.5075 + y)-(15.5 + x, 14.0075 + y), 8
+LINE (15.5 + x, 14.0075 + y)-(14.25 + x, 12.7575 + y), 8
+LINE (14.25 + x, 12.7575 + y)-(15.5 + x, 11.5075 + y), 8
+LINE (15.5 + x, 11.5075 + y)-(15.5 + x, 10.2575 + y), 8
+LINE (15.5 + x, 10.2575 + y)-(14.25 + x, 9.0075 + y), 8
+LINE (14.25 + x, 9.0075 + y)-(15.5 + x, 7.7575 + y), 8
+LINE (15.5 + x, 7.7575 + y)-(15.5 + x, 6.5075 + y), 8
+LINE (15.5 + x, 6.5075 + y)-(14.25 + x, 5.2575 + y), 8
+LINE (14.25 + x, 5.2575 + y)-(13 + x, 5.2575 + y), 8
+LINE (13 + x, 5.2575 + y)-(13 + x, 4.0075 + y), 8
+LINE (13 + x, 4.0075 + y)-(14.25 + x, 4.0075 + y), 8
+LINE (14.25 + x, 4.0075 + y)-(14.25 + x, 2.7575 + y), 8
+LINE (14.25 + x, 2.7575 + y)-(5.5 + x, 2.7575 + y), 8
+LINE (5.5 + x, 2.7575 + y)-(5.5 + x, 4.0075 + y), 8
+LINE (5.5 + x, 4.0075 + y)-(6.75 + x, 4.0075 + y), 8
+LINE (6.75 + x, 4.0075 + y)-(6.75 + x, 5.2575 + y), 8
+PAINT (9.25 + x, 7.7575 + y), 8, 8
+LINE (6.75 + x, 7.7575 + y)-(13 + x, 11.5075 + y), 15, BF
+LINE (8 + x, 9.0075 + y)-(7.75 + x, 9.7575 + y), 1
+PSET (7.75 + x, 9.7575 + y), 1
+LINE (7.75 + x, 9.7575 + y)-(8.25 + x, 9.7575 + y), 1
+LINE (8.75 + x, 9.5075 + y)-(9.25 + x, 9.5075 + y), 1
+LINE (9.75 + x, 9.7575 + y)-(10.25 + x, 9.5075 + y), 1
+LINE (10.75 + x, 9.5075 + y)-(11.25 + x, 9.5075 + y), 1
+END SUB
+
+SUB DrawHerz (x, y)
+LINE (10 + x, 17.1825 + y)-(5 + x, 12.1825 + y), 12
+LINE (5 + x, 12.1825 + y)-(2.5 + x, 9.682499 + y), 12
+LINE (2.5 + x, 9.682499 + y)-(2.5 + x, 7.182499 + y), 12
+LINE (2.5 + x, 7.182499 + y)-(5 + x, 4.682499 + y), 12
+LINE (5 + x, 4.682499 + y)-(7.5 + x, 4.682499 + y), 12
+LINE (7.5 + x, 4.682499 + y)-(10 + x, 7.182499 + y), 12
+LINE (10 + x, 7.182499 + y)-(10 + x, 9.682499 + y), 12
+LINE (10 + x, 9.682499 + y)-(10 + x, 7.182499 + y), 12
+LINE (10 + x, 7.182499 + y)-(12.5 + x, 4.682499 + y), 12
+LINE (12.5 + x, 4.682499 + y)-(15 + x, 4.682499 + y), 12
+LINE (15 + x, 4.682499 + y)-(17.5 + x, 7.182499 + y), 12
+LINE (17.5 + x, 7.182499 + y)-(17.5 + x, 9.682499 + y), 12
+LINE (17.5 + x, 9.682499 + y)-(10 + x, 17.1825 + y), 12
+PAINT (10 + x, 12.1825 + y), 12, 12
+END SUB
+
+SUB DrawInsekt (x, y)
+CIRCLE (10.25 + x, 9.7575 + y), 5, 8, , , 2
+PAINT (10.25 + x, 9.7575 + y), 8, 8
+LINE (7.75 + x, 8.5075 + y)-(6.5 + x, 6.0075 + y), 8
+LINE (6.5 + x, 6.0075 + y)-(5.25 + x, 7.2575 + y), 8
+LINE (7.75 + x, 11.0075 + y)-(6.5 + x, 8.5075 + y), 8
+LINE (6.5 + x, 8.5075 + y)-(5.25 + x, 9.7575 + y), 8
+LINE (7.75 + x, 12.2575 + y)-(6.5 + x, 11.0075 + y), 8
+LINE (6.5 + x, 11.0075 + y)-(5.25 + x, 12.2575 + y), 8
+LINE (15.25 + x, 8.5075 + y)-(14 + x, 6.0075 + y), 8
+LINE (14 + x, 6.0075 + y)-(12.75 + x, 7.2575 + y), 8
+LINE (15.25 + x, 11.0075 + y)-(14 + x, 8.5075 + y), 8
+LINE (14 + x, 8.5075 + y)-(12.75 + x, 9.7575 + y), 8
+LINE (15.25 + x, 12.2575 + y)-(14 + x, 11.0075 + y), 8
+LINE (14 + x, 11.0075 + y)-(12.75 + x, 12.2575 + y), 8
+LINE (10.25 + x, 6.0075 + y)-(10.25 + x, 8.5075 + y), 7
+END SUB
+
+SUB DrawKoerper (x, y)
+IF Joules < 100 THEN DrawCorpSkelett x, y: EXIT SUB
+
+LINE (x, y)-STEP(20, 20), 0, BF
+CIRCLE (9.729994 + x, 9.729998 + y), 10, 8, , , 1
+PAINT (10 + x, 9.699997 + y), 10, 8
+END SUB
+
+SUB DrawMauer (x, y)
+LINE (1.375 + x, 7.5 + y)-(.125 + x, 5 + y), 8
+LINE (.125 + x, 5 + y)-(.125 + x, 3.75 + y), 8
+LINE (.125 + x, 3.75 + y)-(1.375 + x, 2.5 + y), 8
+LINE (1.375 + x, 2.5 + y)-(1.375 + x, 1.25 + y), 8
+LINE (1.375 + x, 1.25 + y)-(2.625 + x, 0 + y), 8
+LINE (2.625 + x, 0 + y)-(5.125 + x, 0 + y), 8
+LINE (5.125 + x, 0 + y)-(7.625 + x, 1.25 + y), 8
+LINE (7.625 + x, 1.25 + y)-(10.125 + x, 0 + y), 8
+LINE (10.125 + x, 0 + y)-(12.625 + x, 0 + y), 8
+LINE (12.625 + x, 0 + y)-(13.875 + x, 1.25 + y), 8
+LINE (13.875 + x, 1.25 + y)-(16.375 + x, 1.25 + y), 8
+LINE (16.375 + x, 1.25 + y)-(17.625 + x, 0 + y), 8
+LINE (17.625 + x, 0 + y)-(18.875 + x, 0 + y), 8
+LINE (18.875 + x, 0 + y)-(20.125 + x, 1.25 + y), 8
+LINE (20.125 + x, 1.25 + y)-(20.125 + x, 3.75 + y), 8
+LINE (20.125 + x, 3.75 + y)-(18.875 + x, 5 + y), 8
+LINE (18.875 + x, 5 + y)-(18.875 + x, 7.5 + y), 8
+LINE (18.875 + x, 7.5 + y)-(17.625 + x, 8.75 + y), 8
+LINE (17.625 + x, 8.75 + y)-(17.625 + x, 12.5 + y), 8
+LINE (17.625 + x, 12.5 + y)-(20.125 + x, 15 + y), 8
+LINE (20.125 + x, 15 + y)-(20.125 + x, 17.5 + y), 8
+LINE (20.125 + x, 17.5 + y)-(18.875 + x, 18.75 + y), 8
+LINE (18.875 + x, 18.75 + y)-(18.875 + x, 20 + y), 8
+LINE (18.875 + x, 20 + y)-(16.375 + x, 20 + y), 8
+LINE (16.375 + x, 20 + y)-(15.125 + x, 18.75 + y), 8
+LINE (15.125 + x, 18.75 + y)-(13.875 + x, 18.75 + y), 8
+LINE (13.875 + x, 18.75 + y)-(12.625 + x, 20 + y), 8
+LINE (12.625 + x, 20 + y)-(10.125 + x, 20 + y), 8
+LINE (10.125 + x, 20 + y)-(7.625 + x, 18.75 + y), 8
+LINE (7.625 + x, 18.75 + y)-(5.125 + x, 18.75 + y), 8
+LINE (5.125 + x, 18.75 + y)-(3.875 + x, 17.5 + y), 8
+LINE (3.875 + x, 17.5 + y)-(1.375 + x, 17.5 + y), 8
+LINE (1.375 + x, 17.5 + y)-(.125 + x, 16.25 + y), 8
+LINE (.125 + x, 16.25 + y)-(.125 + x, 13.75 + y), 8
+LINE (.125 + x, 13.75 + y)-(1.375 + x, 12.5 + y), 8
+LINE (1.375 + x, 12.5 + y)-(1.375 + x, 11.25 + y), 8
+LINE (1.375 + x, 11.25 + y)-(.125 + x, 10 + y), 8
+LINE (.125 + x, 10 + y)-(.125 + x, 8.75 + y), 8
+LINE (.125 + x, 8.75 + y)-(1.375 + x, 7.5 + y), 8
+LINE (11.375 + x, 17.5 + y)-(13.875 + x, 15 + y), 8
+LINE (13.875 + x, 15 + y)-(16.375 + x, 17.5 + y), 8
+PAINT (11.375 + x, 12.5 + y), 7, 8
+LINE (16.375 + x, 13.75 + y)-(15.125 + x, 12.5 + y), 8
+LINE (15.125 + x, 12.5 + y)-(15.125 + x, 10 + y), 8
+LINE (15.125 + x, 7.5 + y)-(16.375 + x, 6.25 + y), 8
+LINE (17.625 + x, 2.5 + y)-(18.875 + x, 1.25 + y), 8
+LINE (16.375 + x, 3.75 + y)-(15.125 + x, 3.75 + y), 8
+LINE (12.625 + x, 2.5 + y)-(11.375 + x, 1.25 + y), 8
+LINE (10.125 + x, 1.25 + y)-(7.625 + x, 2.5 + y), 8
+LINE (5.125 + x, 1.25 + y)-(3.875 + x, 1.25 + y), 8
+LINE (3.875 + x, 2.5 + y)-(6.375 + x, 3.75 + y), 8
+LINE (2.625 + x, 3.75 + y)-(2.625 + x, 5 + y), 8
+LINE (2.625 + x, 6.25 + y)-(3.875 + x, 8.75 + y), 8
+LINE (1.375 + x, 8.75 + y)-(2.625 + x, 8.75 + y), 8
+LINE (2.625 + x, 10 + y)-(3.875 + x, 11.25 + y), 8
+LINE (6.375 + x, 6.25 + y)-(7.625 + x, 6.25 + y), 8
+LINE (7.625 + x, 6.25 + y)-(8.875 + x, 5 + y), 8
+LINE (10.125 + x, 3.75 + y)-(11.375 + x, 5 + y), 8
+LINE (13.875 + x, 5 + y)-(16.375 + x, 5 + y), 8
+LINE (12.625 + x, 7.5 + y)-(12.625 + x, 10 + y), 8
+LINE (10.125 + x, 7.5 + y)-(7.625 + x, 7.5 + y), 8
+LINE (6.375 + x, 8.75 + y)-(7.625 + x, 10 + y), 8
+LINE (6.375 + x, 11.25 + y)-(7.625 + x, 12.5 + y), 8
+LINE (10.125 + x, 13.75 + y)-(11.375 + x, 12.5 + y), 8
+LINE (10.125 + x, 10 + y)-(10.125 + x, 11.25 + y), 8
+LINE (1.375 + x, 15 + y)-(3.875 + x, 13.75 + y), 8
+LINE (3.875 + x, 13.75 + y)-(6.375 + x, 13.75 + y), 8
+LINE (8.875 + x, 15 + y)-(11.375 + x, 16.25 + y), 8
+LINE (5.125 + x, 15 + y)-(7.625 + x, 17.5 + y), 8
+END SUB
+
+SUB DrawMauerWenn (x%, y%)
+    IF x% > 31 OR x% < 1 OR y% > 15 OR y% < 1 THEN EXIT SUB
+    IF Feld(x%, y%) = Mauer THEN DrawMauer x% * 20 - 20, y% * 20 - 20
+END SUB
+
+SUB DrawObjectArea
+'Zeichnet die Objekte auf den Bildschirm:
+'(épfel, Mauern, Schlange, ...)
+'Die Mauern werden nur rund um Blank-Felder gezeichnet, oder aber alle, wenn
+'Refresh% auf einen Wert ungleich 0 gesetzt ist.
+
+IF Refresh% < 0 THEN
+
+FOR x% = 1 TO 31
+    FOR y% = 1 TO 15
+        IF Feld(x%, y%) <> Default THEN
+
+            SELECT CASE Feld(x%, y%)
+                CASE Mauer: DrawMauer x% * 20 - 20, y% * 20 - 20
+
+                CASE HeadLeft: KopfLeft x% * 20 - 20, y% * 20 - 20
+                CASE HeadRight: KopfRight x% * 20 - 20, y% * 20 - 20
+                CASE HeadUp:  KopfUp x% * 20 - 20, y% * 20 - 20
+                CASE HeadDown: KopfDown x% * 20 - 20, y% * 20 - 20
+                CASE Schwanz, CorpLeft, CorpRight, CorpUp, CorpDown: DrawKoerper x% * 20 - 20, y% * 20 - 20
+
+                CASE Apfel: DrawApfel x% * 20 - 20, y% * 20 - 20
+                CASE Herz: DrawHerz x% * 20 - 20, y% * 20 - 20
+                CASE Aeri: DrawAeri x% * 20 - 20, y% * 20 - 20
+                CASE Insekt: DrawInsekt x% * 20 - 20, y% * 20 - 20
+                CASE Gift: DrawGift x% * 20 - 20, y% * 20 - 20
+
+            END SELECT
+
+        END IF
+    NEXT y%
+NEXT x%
+
+ELSE 'not Refresh%:
+
+FOR x% = 1 TO 31
+    FOR y% = 1 TO 15
+        IF Feld(x%, y%) <> Default THEN
+
+            SELECT CASE Feld(x%, y%)
+
+                CASE Blank
+                    IF x% >= 2 AND y% >= 2 THEN
+                        IF Feld(x%, y% - 1) = Schwanz THEN
+                            LINE (x% * 20 - 20, y% * 20 - 19)-STEP(20, 20), 0, BF
+
+                        ELSEIF Feld(x% - 1, y%) = Schwanz THEN
+                            LINE (x% * 20 - 19, y% * 20 - 20)-STEP(20, 20), 0, BF
+                        ELSE
+                            LINE (x% * 20 - 20, y% * 20 - 20)-STEP(20, 20), 0, BF
+                        END IF
+
+                    ELSE
+                        LINE (x% * 20 - 20, y% * 20 - 20)-STEP(20, 20), 0, BF
+                    END IF
+
+
+                            DrawMauerWenn x% + 1, y%
+                            DrawMauerWenn x% - 1, y%
+                            DrawMauerWenn x%, y% + 1
+                            DrawMauerWenn x%, y% - 1
+
+                            Feld(x%, y%) = Default
+
+                CASE HeadLeft: KopfLeft x% * 20 - 20, y% * 20 - 20
+                CASE HeadRight: KopfRight x% * 20 - 20, y% * 20 - 20
+                CASE HeadUp:  KopfUp x% * 20 - 20, y% * 20 - 20
+                CASE HeadDown: KopfDown x% * 20 - 20, y% * 20 - 20
+                CASE Schwanz, CorpLeft, CorpRight, CorpUp, CorpDown: DrawKoerper x% * 20 - 20, y% * 20 - 20
+
+                CASE Apfel: IF Refresh% > 0 THEN DrawApfel x% * 20 - 20, y% * 20 - 20
+                CASE Herz: IF Refresh% > 0 THEN DrawHerz x% * 20 - 20, y% * 20 - 20
+                CASE Aeri: IF Refresh% > 0 THEN DrawAeri x% * 20 - 20, y% * 20 - 20
+                CASE Insekt: IF Refresh% > 0 THEN DrawInsekt x% * 20 - 20, y% * 20 - 20
+                CASE Gift: IF Refresh% > 0 THEN DrawGift x% * 20 - 20, y% * 20 - 20
+
+            END SELECT
+
+        END IF
+    NEXT y%
+NEXT x%
+
+END IF
+
+END SUB
+
+SUB DrawPlayArea
+'Falls Refresh% auf -1 gesetzt ist, so wird der Bildschirm neu gezeichnet,
+'ansonsten werden nur die erforderlichen Objekte neu gezeichnet.
+
+IF Refresh% < 0 THEN
+
+SCREEN 9, , 1, 0
+VIEW
+CLS
+
+LINE (172.75, 28.66015)-(164.9375, 20.84765), 12
+LINE (164.9375, 20.84765)-(161.0313, 16.9414), 12
+LINE (161.0313, 16.9414)-(161.0313, 13.03516), 12
+LINE (161.0313, 13.03516)-(164.9375, 9.128906), 12
+LINE (164.9375, 9.128906)-(168.8438, 9.128906), 12
+LINE (168.8438, 9.128906)-(172.75, 13.03516), 12
+LINE (172.75, 13.03516)-(172.75, 16.9414), 12
+LINE (172.75, 16.9414)-(172.75, 13.03516), 12
+LINE (172.75, 13.03516)-(176.6563, 9.128906), 12
+LINE (176.6563, 9.128906)-(180.5625, 9.128906), 12
+LINE (180.5625, 9.128906)-(184.4688, 13.03516), 12
+LINE (184.4688, 13.03516)-(184.4688, 16.9414), 12
+LINE (184.4688, 16.9414)-(172.75, 28.66015), 12
+PAINT (172.75, 20.84765), 12, 12
+LINE (13.375, 31.51172)-(17.28125, 19.79297), 6
+LINE (17.28125, 19.79297)-(21.1875, 8.074219), 6
+LINE (21.1875, 8.464844)-(13.76563, 31.51172), 14
+LINE (15.32813, 24.08984)-(14.9375, 22.52734), 6
+LINE (14.9375, 22.52734)-(14.15625, 22.13672), 6
+LINE (14.15625, 22.13672)-(13.76563, 21.35547), 6
+LINE (13.76563, 21.35547)-(13.76563, 22.91797), 6
+LINE (13.76563, 22.91797)-(14.9375, 24.08984), 6
+LINE (14.9375, 24.08984)-(15.32813, 24.08984), 6
+LINE (16.10938, 21.35547)-(15.71875, 19.79297), 6
+LINE (15.71875, 19.79297)-(14.9375, 19.40234), 6
+LINE (14.9375, 19.40234)-(14.54688, 18.62109), 6
+LINE (14.54688, 18.62109)-(14.54688, 20.18359), 6
+LINE (14.54688, 20.18359)-(15.71875, 21.35547), 6
+LINE (15.71875, 21.35547)-(16.10938, 21.35547), 6
+LINE (13.76563, 29.55859)-(13.375, 27.99609), 6
+LINE (13.375, 27.99609)-(12.59375, 27.60547), 6
+LINE (12.59375, 27.60547)-(12.20313, 26.82422), 6
+LINE (12.20313, 26.82422)-(12.20313, 28.38672), 6
+LINE (12.20313, 28.38672)-(13.375, 29.55859), 6
+LINE (13.375, 29.55859)-(13.76563, 29.55859), 6
+LINE (14.54688, 26.82422)-(14.15625, 25.26172), 6
+LINE (14.15625, 25.26172)-(13.375, 24.87109), 6
+LINE (13.375, 24.87109)-(12.98438, 24.08984), 6
+LINE (12.98438, 24.08984)-(12.98438, 25.65234), 6
+LINE (12.98438, 25.65234)-(14.15625, 26.82422), 6
+LINE (14.15625, 26.82422)-(14.54688, 26.82422), 6
+LINE (18.75371, 24.43094)-(17.53751, 25.48681), 6
+LINE (17.53751, 25.48681)-(16.67348, 25.35868), 6
+LINE (16.67348, 25.35868)-(15.90538, 25.7746), 6
+LINE (15.90538, 25.7746)-(16.80159, 24.49467), 6
+LINE (16.80159, 24.49467)-(18.43372, 24.20689), 6
+LINE (18.43372, 24.20689)-(18.75371, 24.43094), 6
+LINE (17.8253, 27.11891)-(16.6091, 28.17479), 6
+LINE (16.6091, 28.17479)-(15.74507, 28.04666), 6
+LINE (15.74507, 28.04666)-(14.97699, 28.46257), 6
+LINE (14.97699, 28.46257)-(15.8732, 27.18264), 6
+LINE (15.8732, 27.18264)-(17.50528, 26.89486), 6
+LINE (17.50528, 26.89486)-(17.8253, 27.11891), 6
+LINE (20.6105, 19.05499)-(19.3943, 20.11086), 6
+LINE (19.3943, 20.11086)-(18.5303, 19.98274), 6
+LINE (18.5303, 19.98274)-(17.76221, 20.39865), 6
+LINE (17.76221, 20.39865)-(18.65843, 19.11871), 6
+LINE (18.65843, 19.11871)-(20.29053, 18.83093), 6
+LINE (20.29053, 18.83093)-(20.6105, 19.05499), 6
+LINE (19.6821, 21.74296)-(18.46591, 22.79884), 6
+LINE (18.46591, 22.79884)-(17.6019, 22.67072), 6
+LINE (17.6019, 22.67072)-(16.8338, 23.08661), 6
+LINE (16.8338, 23.08661)-(17.73003, 21.8067), 6
+LINE (17.73003, 21.8067)-(19.36212, 21.51892), 6
+LINE (19.36212, 21.51892)-(19.6821, 21.74296), 6
+LINE (18.84375, 13.54297)-(18.45313, 11.98047), 6
+LINE (18.45313, 11.98047)-(17.67188, 11.58984), 6
+LINE (17.67188, 11.58984)-(17.28125, 10.80859), 6
+LINE (17.28125, 10.80859)-(17.28125, 12.37109), 6
+LINE (17.28125, 12.37109)-(18.45313, 13.54297), 6
+LINE (18.45313, 13.54297)-(18.84375, 13.54297), 6
+LINE (19.625, 10.80859)-(19.23438, 9.246094), 6
+LINE (19.23438, 9.246094)-(18.45313, 8.855469), 6
+LINE (18.45313, 8.855469)-(18.0625, 8.074219), 6
+LINE (18.0625, 8.074219)-(18.0625, 9.636719), 6
+LINE (18.0625, 9.636719)-(19.23438, 10.80859), 6
+LINE (19.23438, 10.80859)-(19.625, 10.80859), 6
+LINE (17.28125, 19.01172)-(16.89063, 17.44922), 6
+LINE (16.89063, 17.44922)-(16.10938, 17.05859), 6
+LINE (16.10938, 17.05859)-(15.71875, 16.27734), 6
+LINE (15.71875, 16.27734)-(15.71875, 17.83984), 6
+LINE (15.71875, 17.83984)-(16.89063, 19.01172), 6
+LINE (16.89063, 19.01172)-(17.28125, 19.01172), 6
+LINE (18.0625, 16.27734)-(17.67188, 14.71484), 6
+LINE (17.67188, 14.71484)-(16.89063, 14.32422), 6
+LINE (16.89063, 14.32422)-(16.5, 13.54297), 6
+LINE (16.5, 13.54297)-(16.5, 15.10547), 6
+LINE (16.5, 15.10547)-(17.67188, 16.27734), 6
+LINE (17.67188, 16.27734)-(18.0625, 16.27734), 6
+LINE (22.26933, 13.88406)-(21.05313, 14.93993), 6
+LINE (21.05313, 14.93993)-(20.1891, 14.8118), 6
+LINE (20.1891, 14.8118)-(19.42101, 15.22772), 6
+LINE (19.42101, 15.22772)-(20.31723, 13.9478), 6
+LINE (20.31723, 13.9478)-(21.94934, 13.66002), 6
+LINE (21.94934, 13.66002)-(22.26933, 13.88406), 6
+LINE (21.34093, 16.57204)-(20.12473, 17.62791), 6
+LINE (20.12473, 17.62791)-(19.2607, 17.49979), 6
+LINE (19.2607, 17.49979)-(18.49261, 17.9157), 6
+LINE (18.49261, 17.9157)-(19.38882, 16.63577), 6
+LINE (19.38882, 16.63577)-(21.0209, 16.34798), 6
+LINE (21.0209, 16.34798)-(21.34093, 16.57204), 6
+LINE (24.12613, 8.508118)-(22.90993, 9.56398), 6
+LINE (22.90993, 9.56398)-(22.04593, 9.435867), 6
+LINE (22.04593, 9.435867)-(21.27783, 9.851776), 6
+LINE (21.27783, 9.851776)-(22.17406, 8.571838), 6
+LINE (22.17406, 8.571838)-(23.80615, 8.284058), 6
+LINE (23.80615, 8.284058)-(24.12613, 8.508118), 6
+LINE (23.19772, 11.19608)-(21.98154, 12.25197), 6
+LINE (21.98154, 12.25197)-(21.11752, 12.12384), 6
+LINE (21.11752, 12.12384)-(20.34943, 12.53973), 6
+LINE (20.34943, 12.53973)-(21.24565, 11.25983), 6
+LINE (21.24565, 11.25983)-(22.87775, 10.97205), 6
+LINE (22.87775, 10.97205)-(23.19772, 11.19608), 6
+LINE (20.40625, 8.464844)-(20.40625, 10.41797), 6
+
+
+LINE (0, 0)-(639, 349), 1, B
+LINE (1, 1)-(638, 43), 1, B
+LINE (2, 42)-(637, 42), 7
+LINE (1, 44)-(638, 348), 1, B
+LINE (2, 347)-(637, 347), 7
+    LINE (637, 2)-(637, 41), 7
+    LINE (637, 44)-(637, 346), 7
+
+VIEW (9, 46)-(629, 345)
+END IF
+
+'31*20pixels(x)
+'15*20pixels(y)
+DrawObjectArea
+DrawScores
+
+PCOPY 1, 0
+END SUB
+
+SUB DrawScores
+ LOCATE 2, 6: PRINT Joules
+ LOCATE 2, 26: PRINT Leben
+END SUB
+
+SUB GameOver (Grund%)
+
+Leben = Leben - 1
+DrawScores
+PCOPY 1, 0
+
+IF (Grund% <> Gift AND Grund% <> Joules) AND Leben > 0 THEN
+    PlaySound Schwanz
+    SecondTry = -1
+    InitializeLevel Land 'noch eine Chance
+    Alter = 0
+    Break = -1
+    Center "Zusammenstoss. [Enter drÅcken.]", 1
+    EXIT SUB
+END IF
+
+GameOverPlane
+SELECT CASE Grund%
+CASE Joules: Center "Du bist verhungert, mein Kind!", 0
+CASE Gift: LINE (18, 22)-(108, 142), 0, BF: ShowPicture "poison.lds": Center "Gott behÅte dich!", 0
+CASE ELSE: Center "mhmmm...", 0
+END SELECT
+
+WHILE INKEY$ <> "": WEND
+a$ = GoPLAY("MBL4O2ao3cefL2eP4L4<a>ceaL2eP4L4dc#dec<aL2bP4L4b>cL4ddc<b>c<aP4abL8>cL2<bg#L4abL2a>")
+IF a$ <> CHR$(13) THEN DO: LOOP UNTIL INKEY$ = CHR$(13)
+
+GetHighScore
+Break = -1
+GameEnd = -1
+
+END SUB
+
+SUB GameOverPlane
+CIRCLE (259.5, 189.5), 50, 4, , , .8
+PAINT (260, 185), 7, 4
+CIRCLE (259.5, 209.5), 30, 4, , , .1666667
+LINE (234.5, 209.5)-(284.5, 209.5), 4
+CIRCLE (240, 175), 10, 9, , , 1
+CIRCLE (280, 175), 10, 9, , , 1
+PAINT (280, 175), 9, 9
+PAINT (240, 175), 9, 9
+LINE (260, 175)-(257, 188), 4
+LINE (257, 188)-(254, 191), 4
+LINE (254, 191)-(251, 194), 4
+LINE (251, 194)-(251, 197), 4
+LINE (251, 197)-(254, 200), 4
+LINE (254, 200)-(260, 200), 4
+LINE (257, 200)-(254, 197), 4
+LINE (254, 197)-(257, 194), 4
+LINE (263, 197)-(266, 197), 4
+LINE (266, 197)-(266, 194), 4
+LINE (266, 194)-(263, 191), 4
+LINE (267, 150)-(317, 160), 4
+LINE (317, 160)-(347, 170), 4
+LINE (347, 170)-(377, 170), 4
+LINE (377, 170)-(397, 160), 4
+LINE (397, 160)-(417, 140), 4
+LINE (417, 140)-(407, 120), 4
+LINE (407, 120)-(377, 110), 4
+LINE (377, 110)-(347, 120), 4
+LINE (347, 120)-(317, 130), 4
+LINE (317, 130)-(347, 130), 4
+LINE (347, 130)-(377, 120), 4
+LINE (377, 120)-(387, 130), 4
+LINE (387, 130)-(377, 150), 4
+LINE (377, 150)-(347, 170), 4
+PAINT (387, 150), 6, 4
+LINE (267, 230)-(347, 240), 4
+LINE (347, 240)-(387, 230), 4
+LINE (387, 230)-(417, 200), 4
+LINE (417, 200)-(437, 160), 4
+LINE (437, 160)-(427, 130), 4
+LINE (427, 130)-(407, 120), 4
+PAINT (377, 200), 4, 4
+CIRCLE (237, 180), 10, 4, , , 1
+CIRCLE (277, 180), 10, 4, , , 1
+LINE (287, 206)-(167, 214), 8, BF
+LINE (168, 208)-(208, 208), 3
+LINE (208, 208)-(188, 238), 3
+LINE (188, 238)-(168, 208), 3
+PAINT (188, 218), 3, 3
+END SUB
+
+SUB GetHighScore
+
+DIM Player AS STRING * 16
+
+
+IF IsTopScore(Joules) THEN
+    Player = InputBox("Herzliche gratulation! Bitte Name eingeben: ", 16)
+    IF RTRIM$(Player) = "" THEN Player = "Unbekannt"
+    SaveScore Joules, Player + SPACE$(20) + "Land: " + LTRIM$(STR$(Land))
+END IF
+ShowTopScore
+
+END SUB
+
+SUB GetPlusFutter
+'prÅft, ob schon ein Plusfutter hingelegt werden muss, und legt es dann hin.
+
+FOR i = plusnow TO UBOUND(PlusFutter)
+    IF (eat >= PlusFutter(i).z) AND PlusFutter(i).z > 0 THEN
+        plusnow = plusnow + 1
+        a% = PlusFutter(i).x
+        B% = PlusFutter(i).y
+        DO UNTIL Feld(a%, B%) = Default
+            a% = a% + 1
+            B% = B% + 2
+            IF a% > 31 THEN a% = 1
+            IF B% > 15 THEN B% = 1 + (B% - 15)
+        LOOP
+            Set a%, B%, PlusFutter(i).o
+        Refresh% = 2
+    END IF
+NEXT
+
+END SUB
+
+SUB GetSnack (x%, y%)
+'prÅft, ob etwas gegessen wird bei x%, y%, und setzt entsprechend die
+'Kalorien hoch. (Oder das Leben,...)
+
+SELECT CASE Feld(x%, y%)
+    CASE Apfel: eat = eat + 1: Joules = Joules + 100: PlaySound Apfel
+    CASE Insekt: eat = eat + 1: Joules = Joules + 50: PlaySound Insekt
+    CASE Gift: eat = eat + 1: PlaySound Gift: GameOver Gift
+    CASE Aeri: eat = eat + 1: Joules = Joules + 200: PlaySound Aeri
+    CASE Herz: eat = eat + 1: Leben = Leben + 1: PlaySound Herz
+    CASE Mauer: GameOver Mauer
+END SELECT
+
+GetPlusFutter
+
+
+END SUB
+
+SUB GetValableDirection
+'prÅft, ob die Richtung gÅltig ist, und kehrt sie um, wenn sie eine 360¯-Drehung
+'darstellt.
+
+SELECT CASE Feld(KopfX, KopfY)
+    CASE HeadLeft: IF Direction = HeadRight THEN Direction = HeadLeft
+    CASE HeadRight: IF Direction = HeadLeft THEN Direction = HeadRight
+    CASE HeadUp: IF Direction = HeadDown THEN Direction = HeadUp
+    CASE HeadDown: IF Direction = HeadUp THEN Direction = HeadDown
+END SELECT
+
+END SUB
+
+FUNCTION GoPLAY$ (p$)
+'Spielt die Musik p$ ab, und bricht die Prozedur ab, falls eine Taste gedrÅckt
+'wurde, und gibt den Tastendruck als Funktionsergebnis zurÅck.
+
+WHILE INKEY$ <> "": WEND
+
+FOR i% = 1 TO LEN(p$)
+    a$ = MID$(p$, i%, 1)
+
+    SELECT CASE UCASE$(a$)
+        CASE "M", "L", "P", "O": a$ = MID$(p$, i%, 2): i% = i% + 1
+    END SELECT
+
+    SELECT CASE MID$(p$, i% + 1, 1)
+        CASE "#", "+", "-", ".": a$ = MID$(p$, i%, 2): i% = i% + 1
+    END SELECT
+
+        PLAY a$
+
+    a$ = INKEY$
+    IF a$ <> "" THEN GoPLAY = a$: EXIT FUNCTION
+
+    DO: LOOP UNTIL PLAY(0) = 0
+NEXT
+
+DO WHILE a$ = ""
+    a$ = INKEY$
+LOOP
+GoPLAY = a$
+
+END FUNCTION
+
+SUB InitializeLevel (Land AS INTEGER)
+'erstellt die Levelzeichnung:
+DIM i AS INTEGER
+
+IF SecondTry THEN Joules = FirstJoules ELSE FirstJoules = Joules
+
+ERASE Feld, PlusFutter
+plusnow = 1
+eat = 0
+NewLevel = 0
+
+SELECT CASE Land
+CASE 1
+        Set 5, 5, Mauer
+        Set 6, 5, Mauer
+        Set 7, 5, Mauer
+        Set 20, 12, Apfel
+        Set 8, 6, Insekt
+        Plus 8, 5, Insekt, 2
+        Plus 20, 3, Aeri, 3
+        Plus 30, 1, Apfel, 3
+        Plus 23, 15, Apfel, 4
+        Plus 1, 1, Aeri, 5
+        NewLevel = 7
+
+        Set 15, 7, HeadLeft
+        Set 16, 7, CorpRight
+        Set 17, 7, Schwanz
+        KopfX = 15: KopfY = 7
+
+CASE 2
+        Set 31, 8, Mauer
+        Set 30, 8, Mauer
+        Set 29, 8, Mauer
+        Set 28, 8, Mauer
+        Set 27, 8, Mauer
+        Set 26, 8, Mauer
+        Set 26, 9, Mauer
+        Set 26, 10, Mauer
+        Set 26, 11, Mauer
+        Set 26, 12, Mauer
+        Set 26, 14, Mauer
+        Set 26, 15, Mauer
+
+        IF SecondTry THEN Set 28, 12, Apfel ELSE Set 28, 12, Herz 'Herz nur beim ersten Versuch einblenden.
+        Set 8, 8, Aeri
+        Set 31, 5, Apfel
+
+        Plus 30, 2, Apfel, 2
+        Plus 15, 2, Insekt, 3
+        Plus 5, 13, Aeri, 4
+        NewLevel = 6
+
+        Set 15, 7, HeadLeft
+        Set 16, 7, CorpRight
+        Set 17, 7, Schwanz
+        KopfX = 15: KopfY = 7
+
+
+CASE 3
+        FOR i = 5 TO 25: Set i, 7, Mauer: NEXT
+
+        FOR i = 1 TO 10
+            DO
+                a% = INT(RND * 31) + 1
+                B% = INT(RND * 15) + 1
+            LOOP UNTIL Feld(a%, B%) = Default
+            Set a%, B%, Insekt
+        NEXT
+
+        NewLevel = 10
+        Set 15, 3, HeadLeft
+        Set 16, 3, CorpRight
+        Set 17, 3, Schwanz
+        KopfX = 15: KopfY = 3
+
+
+CASE 4
+        FOR i = 2 TO 14: Set 5, i, Mauer: NEXT
+        FOR i = 6 TO 30: Set i, 7, Mauer: NEXT
+        Set 3, 5, Gift
+        Set 15, 6, Apfel
+        Set 17, 6, Aeri
+        Set 18, 6, Insekt
+        Set 20, 6, Apfel
+        Set 2, 5, Aeri
+        IF SecondTry THEN Set 3, 7, Insekt ELSE Set 3, 7, Herz
+        Set 20, 14, Aeri
+        NewLevel = 7
+
+        Set 28, 10, HeadLeft
+        Set 29, 10, CorpRight
+        Set 30, 10, Schwanz
+        KopfX = 28: KopfY = 10
+
+CASE 5
+        FOR s% = 8 TO 13
+            Set 10, s%, Mauer
+            Set 21, s%, Mauer
+        NEXT
+
+        FOR s% = 12 TO 19
+            Set s%, 13, Mauer
+        NEXT
+
+        Set 20, 7, Mauer
+        Set 19, 6, Mauer
+        Set 18, 5, Mauer
+        Set 17, 4, Mauer
+        Set 16, 3, Mauer
+        Set 15, 3, Mauer
+        Set 14, 4, Mauer
+        Set 13, 5, Mauer
+        Set 12, 6, Mauer
+        Set 11, 7, Mauer
+
+        Set 16, 5, Schwanz
+        Set 16, 6, CorpUp
+        Set 16, 7, CorpUp
+        Set 16, 8, HeadDown
+
+        KopfX = 16: KopfY = 8
+            RandomSetObjects 8, 4, 0, 0
+        Plus 16, 5, Gift, NewLevel
+        Plus 16, 6, Herz, NewLevel
+        Plus 16, 4, Aeri, NewLevel
+        NewLevel = NewLevel + 2
+
+
+CASE 6
+        s% = 1
+        FOR z% = 10 TO 2 STEP -1
+            s% = s% + 1
+                Set s%, z%, Mauer
+        NEXT
+        s% = 21
+        FOR z% = 2 TO 10
+            s% = s% + 1
+                Set s%, z%, Mauer
+        NEXT
+            s% = 24
+        FOR z% = 9 TO 15
+            s% = s% + 1
+            Set s%, z%, Mauer
+        NEXT
+            s% = 8
+        FOR z% = 9 TO 15
+            s% = s% - 1
+            Set s%, z%, Mauer
+        NEXT
+
+        FOR z% = 5 TO 10
+            Set 12, z%, Mauer
+        NEXT
+
+        FOR z% = 5 TO 10
+            Set 20, z%, Mauer
+        NEXT
+
+        FOR s% = 12 TO 20
+            Set s%, 5, Mauer
+        NEXT
+            Set 16, 5, Default
+        FOR s% = 12 TO 20
+            Set s%, 10, Mauer
+        NEXT
+            Set 16, 10, Default
+
+        FOR s% = 7 TO 25
+            Set s%, 13, Mauer
+        NEXT
+
+        Set 19, 7, Aeri
+        Set 13, 9, Insekt
+        Set 30, 8, Aeri
+            IF SecondTry THEN Set 25, 15, Insekt ELSE Set 25, 15, Herz
+        Set 19, 9, Gift
+        Set 3, 5, Gift
+        Set 4, 4, Apfel
+        Set 15, 14, Apfel
+
+        Set 16, 6, Schwanz
+        Set 16, 7, CorpUp
+        Set 16, 8, HeadDown
+        KopfX = 16: KopfY = 8
+
+        NewLevel = 6
+
+CASE 7
+        FOR s% = 1 TO 31 STEP 6
+            FOR i = 1 TO 6
+                Set s%, i, Mauer
+            NEXT
+        NEXT
+
+        FOR s% = 1 TO 25 STEP 6
+            Set s%, 7, Mauer
+            Set s% + 1, 7, Mauer
+            Set s% + 2, 7, Mauer
+            Set s% + 4, 7, Mauer
+            Set s% + 5, 7, Mauer
+        NEXT
+            Set 31, 7, Mauer
+
+
+        FOR s% = 1 TO 31 STEP 6
+            FOR i = 10 TO 15
+                Set s%, i, Mauer
+            NEXT
+        NEXT
+
+        FOR s% = 1 TO 25 STEP 6
+            Set s%, 9, Mauer
+            Set s% + 1, 9, Mauer
+            Set s% + 2, 9, Mauer
+            Set s% + 4, 9, Mauer
+            Set s% + 5, 9, Mauer
+        NEXT
+            Set 31, 9, Mauer
+
+            FOR i = 1 TO 3
+                Set i, 8, Nothing
+            NEXT
+
+
+        NewLevel = 0
+
+        Set 29, 8, HeadLeft
+        Set 30, 8, CorpRight
+        Set 31, 8, Schwanz
+        KopfX = 29: KopfY = 8
+        IF SecondTry THEN RandomSetObjects 8, 4, 0, 0 ELSE RandomSetObjects 8, 4, 1, 0
+
+
+
+CASE 8
+Center "Das war es. Leider hat es kein Land mehr... Bis bald!", 1
+GetHighScore
+Break = -1
+GameEnd = -1
+EXIT SUB
+
+END SELECT
+
+Direction = Feld(KopfX, KopfY)
+SecondTry = 0
+END SUB
+
+FUNCTION InputBox$ (capt$, l%)
+
+
+DO
+Center capt$ + a$ + CHR$(219) + SPACE$(l% - LEN(a$)), 0
+PCOPY 1, 0
+
+k$ = ""
+DO: k$ = INKEY$: LOOP WHILE k$ = ""
+
+IF LEN(k$) > 1 THEN k$ = ""
+
+IF k$ = CHR$(8) AND LEN(a$) >= 1 THEN a$ = LEFT$(a$, LEN(a$) - 1): k$ = ""
+IF k$ = CHR$(8) THEN k$ = ""
+IF k$ = CHR$(13) OR k$ = CHR$(27) THEN EXIT DO
+
+IF LEN(a$) + 1 <= l% THEN a$ = a$ + k$ ELSE PlaySound Insekt
+LOOP
+
+InputBox$ = a$
+
+END FUNCTION
+
+FUNCTION IsTopScore% (Wert%)
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+
+FOR i = 1 TO MaxScore
+GET f%, , a$
+IF Wert% > VAL(a$) THEN IsTopScore = -1: EXIT FOR
+NEXT
+
+CLOSE f%
+
+END FUNCTION
+
+SUB KopfDown (x, y)
+LINE (x, y)-STEP(20, 20), 0, BF
+
+CIRCLE (9.729994 + x, 9.729998 + y), 10, 8, , , 1
+LINE (9.729998 + x, 17.73 + y)-(11.73 + x, 15 + y), 8
+LINE (12.72999 + x, 15 + y)-(6.729996 + x, 15 + y), 8
+CIRCLE (5.729993 + x, 12 + y), 2, 8, , , 1
+PAINT (8.729996 + x, 6.999998 + y), 7, 8
+PAINT (5.729993 + x, 12 + y), 9, 8
+CIRCLE (12.72999 + x, 12 + y), 2, 8, , , 1
+PAINT (15.73 + x, 7 + y), 7, 8
+PAINT (12.72999 + x, 12 + y), 9, 8
+
+IF Joules < 100 THEN DrawCorpSkelett x, y
+END SUB
+
+SUB KopfLeft (x, y)
+LINE (x, y)-STEP(20, 20), 0, BF
+
+CIRCLE (10.27 + x, 9.729992 + y), 10, 8, , , 1
+LINE (2.270004 + x, 9.729994 + y)-(5 + x, 11.72999 + y), 8
+LINE (5 + x, 12.72999 + y)-(5 + x, 6.729991 + y), 8
+CIRCLE (8 + x, 5.729992 + y), 2, 8, , , 1
+PAINT (13 + x, 8.729997 + y), 7, 8
+PAINT (8 + x, 5.729992 + y), 9, 8
+CIRCLE (8 + x, 12.72999 + y), 2, 8, , , 1
+PAINT (13 + x, 15.73 + y), 7, 8
+PAINT (8 + x, 12.72999 + y), 9, 8
+
+IF Joules < 100 THEN DrawCorpSkelett x, y
+END SUB
+
+SUB KopfRight (x, y)
+LINE (x, y)-STEP(20, 20), 0, BF
+
+CIRCLE (9.729994 + x, 9.729998 + y), 10, 8, , , 1
+LINE (17.73 + x, 10.27 + y)-(15 + x, 8.270004 + y), 8
+LINE (15 + x, 7.270013 + y)-(15 + x, 13.27 + y), 8
+CIRCLE (12 + x, 14.27001 + y), 2, 8, , , 1
+PAINT (6.999998 + x, 11.27 + y), 7, 8
+PAINT (12 + x, 14.27001 + y), 9, 8
+CIRCLE (12 + x, 7.270012 + y), 2, 8, , , 1
+PAINT (7.000001 + x, 4.270002 + y), 7, 8
+PAINT (12 + x, 7.270012 + y), 9, 8
+
+IF Joules < 100 THEN DrawCorpSkelett x, y
+END SUB
+
+SUB KopfUp (x, y)
+LINE (x, y)-STEP(20, 20), 0, BF
+
+CIRCLE (9.729994 + x, 9.729998 + y), 10, 8, , , 1
+LINE (10.27 + x, 2.270004 + y)-(8.270005 + x, 5 + y), 8
+LINE (7.270012 + x, 5 + y)-(13.27 + x, 4.999996 + y), 8
+CIRCLE (14.27001 + x, 7.999998 + y), 2, 8, , , 1
+PAINT (11.27 + x, 13 + y), 7, 8
+PAINT (14.27001 + x, 7.999998 + y), 9, 8
+CIRCLE (7.270012 + x, 8.000003 + y), 2, 8, , , 1
+PAINT (4.270002 + x, 13 + y), 7, 8
+PAINT (7.270012 + x, 8.000003 + y), 9, 8
+
+IF Joules < 100 THEN DrawCorpSkelett x, y
+END SUB
+
+FUNCTION MainMenu
+SCREEN 9, , 0, 0
+
+DIM i AS INTEGER, Keyb AS STRING
+VIEW
+CLS
+LINE (0, 0)-(639, 349), 1, B
+LINE (1, 1)-(638, 348), 1, B
+LINE (637, 2)-(637, 347), 7
+LINE (2, 347)-(637, 347), 7
+
+COLOR 14, 34
+
+ShowPicture "wurmwm1.lds"
+PCOPY 0, 1
+
+
+i = 2
+a% = 0
+DO
+IF a% = i THEN 318
+
+PCOPY 1, 0
+SELECT CASE i
+CASE 1
+    LINE (96, 196)-(226, 201), 8, BF
+    LINE (221, 121)-(226, 196), 8, BF
+CASE 2
+    LINE (361, 121)-(366, 196), 8, BF
+    LINE (236, 196)-(366, 201), 8, BF
+CASE 3
+    LINE (376, 196)-(506, 201), 8, BF
+    LINE (501, 121)-(506, 196), 8, BF
+END SELECT
+
+318
+WHILE INKEY$ <> "": WEND
+Keyb = "": WHILE Keyb = "": Keyb$ = INKEY$: WEND
+a% = i
+        SELECT CASE Keyb
+            CASE CHR$(27): MainMenu = 1: EXIT FUNCTION
+            CASE "6", CHR$(0) + "M": i = i + 1
+            CASE "4", CHR$(0) + "K": i = i - 1
+        END SELECT
+        IF i < 1 THEN i = 1
+        IF i > 3 THEN i = 3
+LOOP UNTIL Keyb = CHR$(13)
+
+MainMenu = i
+END FUNCTION
+
+SUB Menu
+DIM i AS INTEGER, Keyb AS STRING
+CLS
+COLOR 15, 61
+ShowPicture "nibmenu.lds"
+
+i = 1
+
+DO
+
+ActivateMenu i
+WHILE INKEY$ <> "": WEND
+Keyb = "": WHILE Keyb = "": Keyb$ = INKEY$: WEND
+
+        SELECT CASE Keyb
+            CASE CHR$(27): CHAIN "c:\laos\run.bas"
+            CASE "6", CHR$(0) + "M": i = i + 1
+            CASE "4", CHR$(0) + "K": i = i - 1
+        END SELECT
+        IF i < 1 THEN i = 1
+        IF i > 3 THEN i = 3
+LOOP UNTIL Keyb = CHR$(13)
+
+SELECT CASE i
+    CASE 1: HardMode = .18
+    CASE 2: HardMode = .3
+    CASE 3: HardMode = .5
+END SELECT
+
+END SUB
+
+SUB MoveNibbel (ext%)
+'bewegt die Schlange:
+'die Richtung geht durch die Kopfrichtung hervor.
+'Falls ext% den Wert von 1 hat, so wird die Schlange lÑnger
+
+    SELECT CASE Direction
+
+        CASE HeadLeft
+            SwapHead KopfX, KopfY
+            KopfX = KopfX - 1
+            GetSnack KopfX, KopfY
+            Set KopfX, KopfY, HeadLeft
+
+        CASE HeadRight
+            SwapHead KopfX, KopfY
+            KopfX = KopfX + 1
+            GetSnack KopfX, KopfY
+            Set KopfX, KopfY, HeadRight
+
+        CASE HeadDown
+            SwapHead KopfX, KopfY
+            KopfY = KopfY + 1
+            GetSnack KopfX, KopfY
+            Set KopfX, KopfY, HeadDown
+
+        CASE HeadUp
+            SwapHead KopfX, KopfY
+            KopfY = KopfY - 1
+            GetSnack KopfX, KopfY
+            Set KopfX, KopfY, HeadUp
+
+        END SELECT
+
+IF Break THEN Break = 0: EXIT SUB
+
+IF ext% <> 1 THEN
+    'Schwanz muss "abgezupft" werden:
+    'zu Schwanz gehen:
+
+    DIM a AS INTEGER, x AS INTEGER, y AS INTEGER
+    x = KopfX: y = KopfY: z% = 0
+
+    a = Feld(x, y)
+    SELECT CASE a
+        CASE HeadLeft: x = x + 1
+        CASE HeadRight: x = x - 1
+        CASE HeadUp: y = y + 1
+        CASE HeadDown: y = y - 1
+    END SELECT
+
+
+    DO
+    a = Feld(x, y)
+    xb% = x: yb% = y: z% = z% + 1
+
+    SELECT CASE a
+        CASE CorpRight: x = x + 1
+        CASE CorpLeft: x = x - 1
+        CASE CorpDown: y = y + 1
+        CASE CorpUp: y = y - 1
+        CASE Schwanz
+        CASE ELSE: GameOver Schwanz: Break = 0: EXIT SUB
+    END SELECT
+
+    LOOP UNTIL Feld(x, y) = Schwanz
+
+    Feld(x, y) = Blank
+    Feld(xb%, yb%) = Schwanz
+
+
+END IF
+
+
+'der Kalorienverbrauch ist abhÑngig von der LÑnge (diese ist in z% gezÑhlt worden):
+Joules = Joules - INT((z% * 1.2))
+
+IF Joules <= 0 THEN Joules = 0: GameOver Joules
+
+END SUB
+
+SUB MsgBox (a, B, c, d, Text AS STRING, waiting AS INTEGER)
+LOCATE B + 4, a + 2
+a = a * 8 - 8
+B = B * 14 - 14
+c = c * 8 + 4
+d = d * 14 + 6
+
+LINE (a, B)-(c, d), 0, BF
+LINE (a, B)-(c, d), 1, B
+LINE (a + 1, B + 1)-(c - 1, d - 1), 1, B
+LINE (c - 2, B + 2)-(c - 2, d - 2), 7
+LINE (a + 2, d - 2)-(c - 2, d - 2), 7
+PRINT Text
+
+PCOPY 1, 0
+
+IF waiting THEN
+    WHILE INKEY$ <> "": WEND
+    DO: LOOP UNTIL INKEY$ = CHR$(13)
+   
+    Refresh% = -1
+        DrawPlayArea
+    Refresh% = 0
+
+END IF
+END SUB
+
+FUNCTION NameOf$ (p$, laenge%)
+'Gibt den Namen des HighScore-Strings p$ zurÅck und schneidet ihn
+'auf die angegebene laenge%
+
+
+B$ = MID$(p$, INSTR(1, p$, ":") + 1)
+
+a = LEN(B$)
+IF a < laenge% THEN B$ = B$ + SPACE$(laenge% - a)
+NameOf$ = LEFT$(B$, laenge%)
+
+END FUNCTION
+
+SUB PlayGame
+DIM Keyb AS STRING, KeyList(2) AS STRING
+
+GameEnd = 0
+Alter = 0
+Keyb = ""
+DO
+
+FOR i% = 1 TO 2
+    IF KeyList(i%) = "" THEN KeyList(i%) = INKEY$
+NEXT
+DO: LOOP UNTIL INKEY$ = ""
+
+            Keyb = KeyList(1)
+                KeyList(1) = KeyList(2)
+                KeyList(2) = ""
+
+    IF Keyb <> "" THEN
+        SELECT CASE Keyb
+            CASE CHR$(27): EXIT SUB
+            CASE "6", CHR$(0) + "M": Direction = HeadRight
+            CASE "4", CHR$(0) + "K": : Direction = HeadLeft
+            CASE "8", CHR$(0) + "H": : Direction = HeadUp
+            CASE "2", CHR$(0) + "P": : Direction = HeadDown
+        END SELECT
+
+    GetValableDirection
+    END IF
+
+    'beim altern wÑchst unser Nibbel:
+    IF Alter > 20 THEN MoveNibbel 1: Alter = 0 ELSE MoveNibbel 0
+    IF GameEnd THEN EXIT SUB
+
+    DrawPlayArea
+    Refresh% = 0
+
+    nz = TIMER + HardMode
+        DO: LOOP UNTIL TIMER >= nz
+
+    Alter = Alter + 1
+
+IF eat >= NewLevel THEN
+    Land = Land + 1
+    Alter = 0
+    InitializeLevel Land
+    Refresh% = -1
+    DrawPlayArea
+    Center "Und ein neues Schlaraffenland... [Enter drÅcken.]", 1
+END IF
+
+LOOP
+
+END SUB
+
+SUB PlaySound (SoundNr%)
+
+SELECT CASE SoundNr%
+CASE Herz: PLAY "mbt250l8ceg>cg<c"
+CASE Aeri: FOR i = 1 TO 2: SOUND 50, 1: SOUND 100, 1: NEXT
+CASE Gift: FOR i = 600 TO 450 STEP -1: SOUND i, .05: NEXT: SOUND 50, 2: SOUND 100, 1
+CASE Apfel: FOR i = 1 TO 2: SOUND 220, 1: SOUND 90, 1: SOUND 120, 1: NEXT
+CASE Insekt: SOUND 100, 1
+CASE Mauer: SOUND 200, 1: SOUND 100, 1: SOUND 200, 1
+            FOR z = 1 TO 4: FOR i = 200 TO 250: SOUND i, .05: NEXT: NEXT
+CASE Schwanz: PLAY "t255l20ededed"
+
+END SELECT
+
+END SUB
+
+SUB Plus (x%, y%, o%, z%)
+'FÅgt ein neues Futter der Plusfutterliste hinzu:
+
+FOR i = 1 TO UBOUND(PlusFutter)
+    IF PlusFutter(i).x = 0 THEN EXIT FOR
+NEXT
+
+PlusFutter(i).x = x%
+PlusFutter(i).y = y%
+PlusFutter(i).o = o%
+PlusFutter(i).z = z%
+
+END SUB
+
+SUB RandomSetObjects (Standard%, Add%, MaxHearts%, MaxGifts%)
+'Setzt zufallsmÑssig Objekte auf das Feld:
+'Standard% zÑhlt das normale Futter, das zu Beginn angezeigt wird, und
+'Add% gibt die Anzahl Objekte an, die wÑhrend dem Spiel auftauchen.
+'(=sog. PlusFutter)
+
+'MaxHearts% beschreibt die genaue Anzahl der Herzen.
+'MaxGifts% beschreibt die genaue Anzahl der Gifte.
+
+FOR i% = 1 TO Standard%
+DO
+    x% = INT(RND * 31) + 1
+    y% = INT(RND * 15) + 1
+LOOP UNTIL Feld(x%, y%) = Default
+
+Set x%, y%, INT(RND * 3) + 9 'ZufÑlliges Objekt auslesen (ohne Gift, ohne Herzen)
+NewLevel = NewLevel + 1
+NEXT
+
+FOR i% = 1 TO MaxHearts%
+DO
+    x% = INT(RND * 31) + 1
+    y% = INT(RND * 15) + 1
+LOOP UNTIL Feld(x%, y%) = Default
+
+Set x%, y%, Herz
+NewLevel = NewLevel + 1
+NEXT
+
+FOR i% = 1 TO MaxGifts%
+DO
+    x% = INT(RND * 31) + 1
+    y% = INT(RND * 15) + 1
+LOOP UNTIL Feld(x%, y%) = Default
+
+Set x%, y%, Gift
+NEXT
+
+FOR i% = 1 TO Add%
+DO
+    x% = INT(RND * 31) + 1
+    y% = INT(RND * 15) + 1
+LOOP UNTIL Feld(x%, y%) = Default
+
+Plus x%, y%, INT(RND * 3) + 9, NewLevel
+
+NewLevel = NewLevel + 1
+NEXT
+
+
+
+
+END SUB
+
+'
+SUB SaveScore (Wert AS INTEGER, Name$)
+
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+
+B$ = "0:N/A"
+FOR i = 1 TO MaxScore
+GET f%, i, a$
+IF a$ = "" THEN PUT f%, i, a$
+NEXT
+
+
+FOR i = 1 TO MaxScore
+
+GET f%, i, a$
+
+IF Wert > VAL(a$) THEN
+        'transportieren nach vorn:
+        FOR u = MaxScore TO i STEP -1
+                GET f%, u, a$
+                PUT f%, u + 1, a$
+        NEXT
+
+        a$ = STR$(Wert) + ":" + Name$
+        PUT f%, i, a$
+
+        SeinPlatz = i
+
+        EXIT FOR
+END IF
+
+NEXT i
+
+CLOSE f%
+
+END SUB
+
+FUNCTION Score$ (Index)
+f% = FREEFILE
+OPEN HighScoreFile FOR RANDOM AS f%
+GET f%, Index, a$
+IF a$ = "" THEN a$ = "0:Noch keiner"
+Score$ = a$
+CLOSE f%
+END FUNCTION
+
+SUB Set (x%, y%, Objekt%)
+    IF NOT Break THEN Feld(x%, y%) = Objekt%
+END SUB
+
+SUB ShowPicture (Bild$)
+
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+DIM Befehle(5) AS SINGLE
+
+CLOSE 1: OPEN Bild$ FOR BINARY AS 1
+
+i = 0
+DO
+
+FOR Nr = 0 TO 5
+GET 1, , Befehle(Nr)
+NEXT
+
+SELECT CASE CHR$(Befehle(0))
+CASE "p": PSET (Befehle(1), Befehle(2)), Befehle(3)
+CASE "m": PAINT (Befehle(1), Befehle(2)), Befehle(3), Befehle(4)
+CASE "l": LINE (Befehle(1), Befehle(2))-(Befehle(3), Befehle(4)), Befehle(5)
+CASE "r": LINE (Befehle(1), Befehle(2))-(Befehle(3), Befehle(4)), Befehle(5), B
+CASE "b": LINE (Befehle(1), Befehle(2))-(Befehle(3), Befehle(4)), Befehle(5), BF
+CASE "k": CIRCLE (Befehle(1), Befehle(2)), Befehle(3), Befehle(4), , , Befehle(5)
+END SELECT
+
+
+LOOP WHILE Befehle(0) <> 0
+
+CLOSE 1
+
+END SUB
+
+SUB ShowTopScore
+
+SCREEN 9, , 1, 0
+
+VIEW
+CLS
+
+LINE (0, 0)-(639, 349), 1, B
+LINE (1, 1)-(638, 348), 1, B
+LINE (637, 2)-(637, 347), 7
+LINE (2, 347)-(637, 347), 7
+
+LOCATE 2, 3: PRINT "Die besten 10 Spieler..."
+LOCATE 4
+
+FOR i = 1 TO MaxScore
+
+IF i = SeinPlatz THEN
+        PRINT
+        COLOR 14
+        LOCATE , 4: PRINT " " + NameOf(Score$(i), 55);
+        PRINT USING "##### Joules"; VAL(Score$(i));
+
+ELSE
+        PRINT
+        COLOR 15
+        LOCATE , 6: PRINT NameOf(Score$(i), 55);
+        PRINT USING "##### Joules"; VAL(Score$(i));
+
+END IF
+
+PRINT
+NEXT
+PCOPY 1, 0
+
+a$ = ""
+DO: a$ = INKEY$: LOOP WHILE a$ <> CHR$(13) AND a$ <> CHR$(27)
+SeinPlatz = 0
+
+END SUB
+
+SUB SwapHead (x%, y%)
+    SELECT CASE Feld(x%, y%)
+        CASE HeadLeft: Feld(x%, y%) = CorpRight
+        CASE HeadRight: Feld(x%, y%) = CorpLeft
+        CASE HeadUp: Feld(x%, y%) = CorpDown
+        CASE HeadDown: Feld(x%, y%) = CorpUp
+    END SELECT
+END SUB
+

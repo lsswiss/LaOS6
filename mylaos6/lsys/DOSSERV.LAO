@@ -1,0 +1,2229 @@
+DECLARE SUB OpenFile (Datei$, Symbol1$, Kennung$, InOrdner$, Art1$, FileInfo1$)
+DECLARE SUB SwapDir (Pfad$)
+DECLARE SUB PartFormat (Text$, Setting$)
+DECLARE SUB FileCopy (Source$, Dest$)
+DECLARE SUB ProgressBar (Stat AS INTEGER)
+
+'Letztmals optimiert fÅr: (16. Juli 2002)
+'LaOS 6
+'<< OPTIMIERTE SYMBOLLISTE >>
+
+
+DECLARE SUB SetCombo (Box!, Index!, Wert AS STRING)
+DECLARE FUNCTION GetCombo$ (Box!, Index!)
+DECLARE SUB EraseCombo ()
+DECLARE FUNCTION BothTrim$ (Wert AS STRING)
+DECLARE SUB K6 ()
+DECLARE SUB Initialisiere (File$)
+DECLARE SUB K5 ()
+DECLARE SUB K9 ()
+DECLARE SUB K7 ()
+DECLARE SUB K8 ()
+DECLARE SUB FrameWindow (a!, B!, c!, d!, Loesch!)
+DECLARE FUNCTION GetPath$ ()
+DECLARE FUNCTION GetDir$ ()
+DECLARE FUNCTION Negpath$ (Way$)
+DECLARE FUNCTION Gerade! (Zahl!)
+DECLARE FUNCTION IsExist! (Datei$, InOrdner$)
+DECLARE FUNCTION ComboBox$ (Nr!, z!, s!, zu!, su!)
+DECLARE FUNCTION IsEmptyBox! (Ordner$)
+DECLARE FUNCTION IsExistBox! (Box$)
+DECLARE SUB DeleteBox (Box$)
+DECLARE SUB NewBox (Name$)
+DECLARE FUNCTION Trim$ (Variable$, Trennzeichen$, a!)
+DECLARE FUNCTION MenuInt$ (Item$, Trennzeichen$)
+DECLARE SUB LoadProgram (Ordner$, Programm$)
+DECLARE FUNCTION RText$ (Text$)
+DECLARE SUB LoadFileBox (Ordner$)
+DECLARE SUB Dialog (Caption$)
+DECLARE SUB GraphicView (a!, B!, c!, d!)
+DECLARE SUB LoadSymbol (Name$, Kennung$)
+DECLARE SUB ShowSymbols ()
+DECLARE SUB MenuBox (Zeilen!, Spalten!, Caption$)
+DECLARE SUB Menuact (Menu$)
+DECLARE FUNCTION SDate$ ()
+DECLARE SUB TimeLock (Status!)
+DECLARE SUB StoppUhrBeep (Uhr!)
+DECLARE SUB Symbact (Symbol$)
+DECLARE SUB MakeFile (Art1$, Symbol1$, OSName1$, Ordner1$, Link1$, FileInfo1$)
+DECLARE SUB ShowInfo ()
+DECLARE SUB Info (Control$, InfoText$)
+DECLARE SUB clearase (Objekt$)
+DECLARE SUB GetSymb (x!, y!, Name$, Kennung$)
+DECLARE FUNCTION N! (Nr.!)
+DECLARE SUB Register (z!, s!, zu!, su!, Text$)
+DECLARE SUB Frame ()
+DECLARE SUB GetInp ()
+DECLARE FUNCTION GetKey$ ()
+DECLARE SUB CLW ()
+DECLARE SUB ClearControls (Connect)
+DECLARE SUB NextControl ()
+DECLARE SUB LastControl ()
+DECLARE SUB Activate (Control$)
+DECLARE FUNCTION Control$ (Zeilen!, Spalten!, Text$)
+DECLARE SUB Delete (Objekt$)
+DECLARE FUNCTION InputBox$ (Zeilen!, Spalten!, Text$, Break!, MaxDown)
+DECLARE SUB ExitBox (x!, y!)
+DECLARE SUB WindowState ()
+DECLARE FUNCTION MakeWindow$ (a!, B!, c!, d!)
+DECLARE FUNCTION TextBox$ (Zeilen!, Spalten!, Text$, Break!)
+DECLARE SUB echo (Caption$)
+
+'LaOS
+ON ERROR GOTO fehlernext
+
+SCREEN 9
+VIEW PRINT 1 TO 25
+'    -> 640 x 350 Grafik
+'    ˛ 80 x 25 oder 80 x 43 Textformat, 8 x 14 oder 8 x 8 Zeichenfeldgrî·e
+'    ˛ Zuweisung von 16 Farben zu 4 Attributen (64 KB Adapterspeicher) oder
+'      64 Farben zu 16 Attributen (mehr als 64 KB Adapterspeicher)
+'    ˛ Falls 64KB EGA Adapterspeicher, 1 Bildschirmspeicherseite (0);
+'      ansonsten 2 Seiten (0-1)
+
+DIM SHARED Hintergrund(456)
+DIM SHARED StoppUhr(1 TO 4) '1 ist Reserviert!
+DIM SHARED AlteZeit(1 TO 4)
+DIM kbd AS STRING
+DIM SHARED TextScale
+DIM SHARED TextBreak
+DIM SHARED Activ AS STRING
+DIM SHARED ControlNr
+DIM SHARED ControlList(500) AS STRING
+DIM SHARED Break AS INTEGER
+DIM SHARED EBox.left, EBox.top AS INTEGER
+DIM SHARED Left, Top, Right, Down AS INTEGER 'FÅr Zeilenabfragen
+DIM SHARED QuickInfos(5) AS STRING
+DIM SHARED ControlConnect AS INTEGER 'Zur Unterscheidung der 3 Eingabecontrols
+DIM SHARED Symbollist(500) AS STRING, SymbolNr
+DIM SHARED Symb.left AS INTEGER, Symb.top AS INTEGER, Symb.total AS INTEGER
+DIM SHARED Symb.ipp AS INTEGER 'IPP=Icons par page (misst die letzte volle Seite)
+DIM SHARED Symb.count 'ZÑhlt die Symbole in der aktuellen Seite
+DIM SHARED DimY AS LONG, DimNow AS INTEGER, Symb.pnr'Nr. in der aktuellen Seite
+DIM SHARED MenuList(1) AS STRING, MenuNr
+DIM SHARED Focus AS STRING
+DIM SHARED keyb AS STRING
+DIM SHARED Change(5) AS INTEGER
+DIM SHARED FileBox AS STRING 'In FileBox ist der aktuelle Ordner gespeichert.
+DIM SHARED errorlevel AS INTEGER
+DIM SHARED Choice AS INTEGER
+DIM SHARED Combo(1 TO 2, 1 TO 100) AS STRING
+DIM SHARED Befehle(1, 5) AS SINGLE
+
+
+FesteEinstellungen:
+WIDTH 80, 25
+
+CLOSE 1: OPEN "c:\laos\config.lcg" FOR RANDOM AS 1
+GET 1, 1, AltesSchema$
+Schema$ = AltesSchema$
+
+Einstellungen:
+CLOSE 1: OPEN "c:\laos\" + Schema$ + ".scl" FOR INPUT AS 1: LINE INPUT #1, a$
+DIM m(1 TO 15)
+FOR i = 1 TO 15
+INPUT #1, m(i)
+NEXT
+
+DIM SHARED Fensterfarbe AS INTEGER, Randfarbe AS INTEGER, Schattenfarbe AS INTEGER, Controlfarbe AS INTEGER
+DIM SHARED Symbolactiv AS INTEGER, SymbactStil AS INTEGER, SymbolFrame AS INTEGER, SymbolColor AS INTEGER
+DIM SHARED Hintergrundfarbe  AS INTEGER, Farbe AS INTEGER, IconVerticalSpace AS INTEGER
+DIM SHARED InfoTime AS INTEGER, InfoColor  AS INTEGER, InfoFrame, Datumsformat AS INTEGER
+
+Fensterfarbe = m(1)'Fensterfarben
+Randfarbe = m(2)
+Schattenfarbe = m(3)
+Controlfarbe = m(4)  'SchaltflÑchenfarbe
+Symbolactiv = m(5) 'Umrahmungsfarbe des aktiven Symbols
+SymbactStil = m(6) 'Umrahmungs-Stil des aktivierten Symbols (-1=voll)
+
+SymbolFrame = m(7) 'Farbe des Symbolrahmens
+SymbolColor = m(8) 'Farbe des Symbolhintergrundes
+
+Hintergrundfarbe = m(9) 'Bildschirmfarben
+Farbe = m(10) '= Vordergrundfarbe
+
+IconVerticalSpace = m(11) 'Setzt den Vertikalen Standard-Abstand der Symbole
+                            'Auf Null gesetzt ist der Abstand genÅgend.
+InfoTime = m(12)'Setzt die zu verstreichende Zeit in Sekunden, bis die Quick-
+                  'Info erscheint. (0=Ausgeschaltet)
+InfoColor = m(13) 'Setzt die Farbe, in der der Quick-Info-Text erscheint.
+InfoFrame = m(14) 'Setzt die Farbe des Quick-Info-Rahmens.
+
+Datumsformat = m(15)
+
+ERASE m
+VorStart:
+ON ERROR GOTO Fehler
+
+COLOR Farbe, Hintergrundfarbe
+
+Code = 0 'Legt die Ereignisverfolgung fÅr die Alt-Taste fest
+FOR i = 15 TO 19
+KEY i, CHR$(Code) + CHR$(56)
+ON KEY(i) GOSUB AltKey
+Code = Code + 32
+NEXT i
+Code = 0
+
+DIM SHARED Pfad AS STRING, Suffix AS STRING
+DIM SHARED Show AS INTEGER, ActivCombo
+DIM SHARED ActivItem AS STRING
+DIM SHARED Refresh AS INTEGER
+
+'Pfad = "c:\laos"
+
+SHELL "cd >c:\laos\tt.tmp" 'Pfad bestimmen:
+CLOSE 1: OPEN "c:\laos\tt.tmp" FOR INPUT AS 1
+LINE INPUT #1, Pfad
+
+CHDIR Pfad
+
+IF LEN(Pfad) = 3 AND MID$(Pfad, 3, 1) = "\" THEN Pfad = LEFT$(Pfad, 2)
+CLOSE 1: KILL "c:\laos\tt.tmp"
+
+CLOSE 1: OPEN "c:\laos\suffix.lcn" FOR RANDOM AS 1
+GET 1, 1, Suffix: CLOSE 1
+
+IF LEN(Suffix) < 2 THEN Suffix = ".*"
+
+
+CLOSE : OPEN "c:\laos\mirror.bnk" FOR RANDOM AS 1: CLOSE 1
+ENVIRON "DIRCMD="
+
+Programmstart:
+CONST ComboTemp = 3
+EraseCombo
+
+DIM SHARED lw$
+lw$ = LEFT$(Pfad, 1)
+DO: LOOP WHILE INKEY$ <> ""
+ON KEY(4) GOSUB K4: KEY(4) ON
+CLW
+Register 3, 3, 20, 48, Pfad
+'Echo "Bitte warten, ich durchsuche das aktuelle Verzeichnis."
+
+anzeigen:
+Show = 1: Path$ = GetDir
+
+weiter:
+COLOR Farbe
+Right = 79
+TextBreak = 55: TextScale = 4: Break = 0
+echo "F4 - Beenden"
+echo "F5 - Lîschen"
+echo "F6 - Suchen"
+echo "F7 - In LaOS aufnehmen"
+echo "F8 - Dateiauswahl: *" + Suffix
+echo ""
+echo "F9 - Laufwerk: " + UCASE$(lw$)
+LOCATE 2, 2
+ActivItem = File$: File$ = GetPath
+
+DO
+ IF keyb = "tab" THEN
+  IF ActivCombo = 1 THEN ActivItem = Path$: Path$ = GetDir ELSE ActivItem = File$: File$ = GetPath
+ END IF
+
+IF keyb = CHR$(13) THEN
+  IF ActivCombo = 1 THEN GOTO RunProg
+   IF ActivCombo = 2 THEN
+    IF Path$ = ".." THEN Pfad = Negpath(Pfad + "\") ELSE Pfad = Pfad + "\" + Path$
+    GOTO anzeigen
+   END IF
+ END IF
+
+ IF keyb = "esc" THEN CHAIN "c:\laos\run.bas"
+
+LOOP
+
+RunProg:
+EraseCombo
+ERASE Change
+
+SELECT CASE LCASE$(RIGHT$(File$, LEN(File$) - INSTR(File$, ".")))
+CASE "bas": Initialisiere File$
+CASE "lao": RUN File$
+CASE "scl": Dialog "Dies ist ein Bildschirmschema. Um es anzusehen, wÑhlen Sie in der Verwalt-  ungsmappe das Symbol 'Farbschema Ñndern' an."
+CASE "lsb": Register 5, 5, 12, 35, "Symbol anzeigen:"
+ClearControls (2)
+GetSymb -1, -1, File$, "         weiter         ": Activate "         weiter         "
+a$ = GetKey
+CASE "bat", "exe", "com", "pif": CLW
+        CLOSE 1: OPEN "c:\laos\TEMP.Way" FOR OUTPUT AS 1
+        PRINT #1, "KILL " + CHR$(34) + "c:\laos\TEMP.Way"
+        PRINT #1, "SHELL " + CHR$(34) + Pfad + "\" + File$ + CHR$(34)
+        PRINT #1, "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34)
+        CLOSE 1
+        RUN "c:\laos\TEMP.Way"
+        'SHELL Pfad$ + "\" + File$
+END SELECT
+GOTO weiter
+
+TimeEreignis:
+TIMER OFF
+ShowInfo
+RETURN
+
+
+AltKey:
+IF MenuList(1) <> "" THEN Activate CHR$(0): ControlConnect = 1: Activate MenuList(1)
+RETURN
+
+K4: CHAIN "c:\laos\run.bas"
+
+Fehler:
+Dialog "Der Fehler" + STR$(ERR) + " ist aufgetreten."
+RESUME NEXT
+
+fehlernext:
+errorlevel = 1
+RESUME NEXT
+
+SUB Activate (Control$)
+SELECT CASE ControlConnect
+CASE 0 'Controls
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+IF a$ = "" THEN EXIT SUB
+'ControlNr = i
+Activ = Control$
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+p$ = Control(Zeilen, Spalten, Texta$)
+LOOP UNTIL a$ = ""
+CASE 1 'Menus
+i = 0
+Activ = Control$
+DO
+i = i + 1
+a$ = MenuList(i)
+IF a$ = "" THEN EXIT DO
+Menuact a$
+LOOP UNTIL a$ = ""
+
+
+
+CASE 2 'Symbole
+i = 0
+Activ = Control$
+'i = Symb.total * Symb.page
+DO
+i = i + 1
+a$ = Symbollist(i)
+IF MID$(a$, 19) = Activ THEN Activ = a$
+IF a$ = "" THEN EXIT DO
+Symbact a$
+LOOP UNTIL a$ = ""
+END SELECT
+END SUB
+
+FUNCTION BothTrim$ (Wert AS STRING)
+
+BothTrim = LTRIM$(RTRIM$(Wert))
+
+END FUNCTION
+
+SUB clearase (Objekt$) 'Lîscht den Anzeige-Inhalt eines MakeWindow-Objektes
+a = VAL(MID$(Objekt$, 1, 3))
+B = VAL(MID$(Objekt$, 4, 3))
+c = VAL(MID$(Objekt$, 7, 3))
+d = VAL(MID$(Objekt$, 10, 3))
+
+
+'Fenster:
+LINE (a + 2, B + 2)-(c - 1, d - 1), 0, BF
+
+Objekt$ = ""
+END SUB
+
+SUB ClearControls (Connect)
+SELECT CASE Connect
+CASE 0: ControlNr = 0: ERASE ControlList: ERASE QuickInfos
+CASE 1: MenuNr = 0: ERASE MenuList: ERASE QuickInfos
+CASE 2: SymbolNr = 0: ERASE Symbollist: Symb.left = 0: Symb.top = 0: Symb.total = 0
+CASE 3 'Alle lîschen
+ControlNr = 0: ERASE ControlList: ERASE QuickInfos
+MenuNr = 0: ERASE MenuList: ERASE QuickInfos
+SymbolNr = 0: ERASE Symbollist: Symb.left = 0: Symb.top = 0: Symb.total = 0
+END SELECT
+
+END SUB
+
+SUB CLW
+'Fenster:
+LINE (1, 1)-(637, 347), 0, BF
+LINE (0, 0)-(638, 348), Fensterfarbe, B
+'Schatten:
+LINE (1, 1)-(637, 1), Schattenfarbe
+LINE (1, 1)-(1, 347), Schattenfarbe
+'Rand:
+LINE (639, 349)-(0, 349), Randfarbe
+LINE (639, 349)-(639, 0), Randfarbe
+
+TextScale = 2 '=Zeile
+TextBreak = 2 '=Spalte
+EBox.left = 603: EBox.top = 321
+Left = 2: Top = 2: Right = 79: Down = 24
+END SUB
+
+FUNCTION ComboBox$ (Nr, z, s, zu, su)
+IF Show = 0 THEN ActivCombo = Nr
+
+IF z = 0 THEN z = Top
+IF s = 0 THEN s = Left
+IF zu = 0 THEN zu = Down
+IF su = 0 THEN su = Right
+
+MaxLenth = su - s + 1
+MaxDown = zu - z + 1
+
+
+a = s * 8 - 11
+B = z * 14 - 17
+c = su * 8 + 1
+d = zu * 14 + 1
+
+
+
+FrameWindow a, B, c, d, 0
+ItemPos = 1
+ItemPage = 1
+
+IF ActivItem <> "" THEN act$ = ActivItem: zrl = 1: GOTO aktivieren
+weiter2:
+zrl = 0
+
+DO
+
+ Standort = ItemPage * MaxDown - MaxDown + 1
+LOCATE z
+
+ FOR i = 0 TO MaxDown - 1
+  IF Standort + i <= 32000 THEN
+  IF LEN(GetCombo(Nr, Standort + i)) <= MaxLenth THEN
+  Eintrag$ = GetCombo(Nr, Standort + i) + SPACE$(MaxLenth - LEN(GetCombo(Nr, Standort + i)))
+  ELSE
+  Eintrag$ = LEFT$(GetCombo(Nr, Standort + i), MaxLenth)
+  END IF
+  ELSE Eintrag$ = SPACE$(MaxLenth)
+  END IF
+
+   IF Standort + i = ItemPos THEN COLOR InfoColor ELSE COLOR Farbe
+   LOCATE , s: PRINT Eintrag$
+  IF i = 0 THEN LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B ELSE LINE (s * 8 - 9, (z + i) * 14 - 14)-(su * 8, (z + i) * 14), 0, B
+
+ NEXT i
+
+i = ItemPos - Standort
+IF Show = 0 THEN LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), InfoFrame, B
+
+IF Show = 1 THEN Show = 0: EXIT FUNCTION'Es wird nur Angezeigt.
+
+ActivItem = GetCombo(Nr, ItemPos)
+SELECT CASE GetKey
+CASE "up"
+ItemPos = ItemPos - 1
+IF ItemPos < Standort THEN ItemPage = ItemPage - 1
+CASE "down"
+IF ItemPos < 32000 THEN
+IF GetCombo(Nr, ItemPos + 1) <> "" THEN
+
+ItemPos = ItemPos + 1
+IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+END IF
+END IF
+
+CASE "home"
+    ItemPos = 1
+    ItemPage = 1
+
+CASE "end"
+    DO
+        ItemPos = ItemPos + 1
+        Standort = ItemPage * MaxDown - MaxDown + 1
+        IF ItemPos > Standort + MaxDown THEN ItemPage = ItemPage + 1
+    LOOP UNTIL GetCombo(1, ItemPos) = ""
+        ItemPos = ItemPos - 1
+
+
+CASE "pageup"
+IF ItemPos + MaxDown > 0 THEN
+ItemPage = ItemPage - 1
+ItemPos = ItemPos - MaxDown
+END IF
+CASE "pagedown"
+IF ItemPos + MaxDown < 32001 THEN
+IF GetCombo(Nr, ItemPos + MaxDown) <> "" THEN
+ItemPage = ItemPage + 1
+ItemPos = ItemPos + MaxDown
+END IF
+END IF
+CASE CHR$(13): Choice = ItemPos: ComboBox = GetCombo(Nr, ItemPos): EXIT FUNCTION
+CASE CHR$(27): Choice = 0: keyb = "esc": ComboBox = GetCombo(Nr, ItemPos): EXIT FUNCTION
+CASE CHR$(9)
+LINE (s * 8 - 9, (z + i) * 14 - 15)-(su * 8, (z + i) * 14), 0, B
+keyb = "tab": ComboBox = GetCombo(Nr, ItemPos): Choice = 0: EXIT FUNCTION
+CASE ELSE
+IF Refresh = 1 THEN EXIT FUNCTION
+IF LEN(keyb) = 1 THEN
+act$ = keyb
+aktivieren:
+AltePosition = ItemPos
+AlteSeite = ItemPage
+
+DO
+ ItemPos = ItemPos + 1
+ IF ItemPos = AltePosition THEN ItemPage = AlteSeite: EXIT DO
+ Standort = ItemPage * MaxDown - MaxDown + 1
+ IF ItemPos > Standort + MaxDown - 1 THEN ItemPage = ItemPage + 1
+
+   Eintrag$ = LEFT$(GetCombo(Nr, ItemPos), MaxLenth)
+   IF Eintrag$ = "" OR ItemPos > 31999 THEN ItemPos = 0: ItemPage = 1
+
+LOOP UNTIL LCASE$(LEFT$(Eintrag$, LEN(act$))) = LCASE$(act$)
+IF zrl = 1 THEN GOTO weiter2
+
+END IF
+
+END SELECT
+
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+IF GetCombo(Nr, ItemPos) = "" THEN ItemPos = ItemPos - 1
+IF ItemPos < 1 THEN ItemPos = 1: ItemPage = 1
+
+LOOP
+ActivItem = ""
+END FUNCTION
+
+FUNCTION Control$ (Zeilen, Spalten, Text$)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + LEN(Text$)
+EndZeile = Zeilen + INT(LEN(Text$) / 80 + 1)
+IF LEN(Text$) = 80 THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+LOCATE Zeilen, Spalten: COLOR Farbe: PRINT Text$
+'LINE (a, B)-(c, d), Farbe, B
+'PAINT (a + 1, B + 1), Controlfarbe, Farbe
+LINE (a, B)-(c, d), Controlfarbe, B
+
+'Schatten: (Wird angezeigt, falls das Control aktiviert ist.
+IF Activ = Text$ THEN
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+'Control eintragen:
+a$ = Zeilen$ + Spalten$ + Text$
+i = 0
+DO: i = i + 1
+IF ControlList(i) = a$ THEN GOTO 2
+LOOP UNTIL ControlList(i) = ""
+ControlList(i) = a$
+ControlNr = 1
+
+2 Control$ = "": Activ = Text$: ControlConnect = 0: TextScale = Zeilen + 2
+END FUNCTION
+
+SUB Delete (Objekt$) 'Lîscht die Anzeige eines MakeWindow-Objektes
+a = VAL(MID$(Objekt$, 1, 3))
+B = VAL(MID$(Objekt$, 4, 3))
+c = VAL(MID$(Objekt$, 7, 3))
+d = VAL(MID$(Objekt$, 10, 3))
+
+
+'Fenster:
+LINE (a, B)-(c + 1, d + 1), 0, BF
+
+Objekt$ = ""
+END SUB
+
+SUB DeleteBox (Box$)
+
+CLOSE 1: OPEN "c:\laos\ORDNER.BNK" FOR RANDOM AS 1
+i = 0
+DO
+i = i + 1
+GET 1, i, a$
+IF a$ = Box$ THEN
+DO
+plus = plus + 1
+GET 1, i + plus, a$
+PUT 1, i + plus - 1, a$
+LOOP WHILE a$ <> ""
+errorlevel = 0: EXIT SUB
+END IF
+LOOP UNTIL a$ = ""
+
+errorlevel = 1 'Ordner nicht gefunden.
+END SUB
+
+SUB Dialog (Caption$)
+IF LEN(Caption$) < 22 THEN Caption$ = STRING$(INT((22 - LEN(Kennung$)) / 2), " ") + Caption$ + STRING$(CINT((22 - LEN(Kennung$)) / 2 + .1), " ")
+
+IF LEN(Caption$) > 303 THEN Caption$ = LEFT$(Caption$, 300) + "..."
+IF LEN(Caption$) > 76 THEN Length = 76 ELSE Length = LEN(Caption$)
+Spalten = INT(40 - Length / 2 + 1)
+Zeilen = 11 - INT(LEN(Caption$) / 76) + 1
+
+x1! = Spalten * 8 - 11
+y1! = Zeilen * 14 - 17
+EndSpalten = 40 + INT(Length / 2)
+EndZeilen = 14 + INT(LEN(Caption$) / 76)
+IF INT(LEN(Caption$) / 76) > 1 THEN EndZeilen = EndZeilen - (INT(LEN(Caption$) / 76) - 1)
+IF LEN(Caption$) < 76 THEN EndZeilen = EndZeilen + 1
+x2! = EndSpalten * 8 + 4
+y2! = EndZeilen * 14 - 4
+Groesse = 4 + INT(((PMAP(x2!, 0) - PMAP(x1!, 0) + 1) * (1) + 7) / 8) * 2 * (PMAP(y2!, 1) - PMAP(y1!, 1) + 1)
+
+DIM Background(Groesse) AS INTEGER
+
+
+GET (x1!, y1!)-(x2!, y2!), Background
+
+FrameWindow x1!, y1!, x2! - 1, y2! - 1, 1
+
+ecr = 1
+FOR i = 1 TO INT(LEN(Caption$) / 76) + 1
+LOCATE Zeilen, Spalten
+PRINT MID$(Caption$, ecr, 76)
+ecr = ecr + 76
+Zeilen = Zeilen + 1
+NEXT
+
+PRINT TextBox(Zeilen + 1, 33, "      OK      ", 0)
+DO
+B$ = a$
+a$ = GetKey
+LOOP UNTIL a$ = CHR$(27) OR a$ = CHR$(13)
+IF a$ = CHR$(27) THEN keyb = "esc" ELSE keyb = B$
+PUT (x1!, y1!), Background, PSET: x1! = 0: y1! = 0: EXIT SUB
+
+
+END SUB
+
+SUB echo (Txt$)
+PartFormat Txt$, fmt$
+
+'Format: "l", "c", "r": LinksbÅndig, zentriert, rechtsbÅndig
+
+SELECT CASE fmt$
+    CASE "l", "": Align% = 0
+    CASE "c": Align% = 1
+    CASE "r": Align% = 2
+END SELECT
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF TextScale > Down THEN TextScale = Top
+
+'10.11.1999: Echo mit Zeilenumbruch (C) Urs Langmeier.
+
+Text$ = Txt$ + " "
+
+DIM s AS INTEGER, z AS INTEGER, t AS INTEGER, brk AS INTEGER
+
+s = 1
+z = Right - TextBreak + 2'ZeilenlÑnge
+dwn = 0
+
+p1% = s
+p2% = p1%
+DO
+    t = t + 1
+        IF t = p1% THEN p2% = p1%'alten Retten
+        p1% = INSTR(t, Text$, " ")
+        IF p1% = 0 OR p1% = LEN(Text$) THEN
+            IF p1% <= s + z - 1 THEN p2% = LEN(Text$): brk = -1
+        END IF
+
+        IF p1% > s + z - 1 OR brk THEN 'nehme alten, weil neuen Åber die Zeile ragt.
+            'Zeile ausgeben:
+            p1% = p2%
+            IF TextScale + dwn > Down THEN EXIT DO
+                IF p1% - s <= 0 THEN 'falls Wort zu lange (nicht in die Zeile passt:)
+
+                    p1% = s + z - 1
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% - 1
+                    s = t + 1
+
+                ELSE
+
+                    a$ = MID$(Text$, s, p1% - s)
+                    t = p1% + 1
+                    s = t
+                END IF
+
+            'Ausrichtung:
+            SELECT CASE Align%
+                CASE 0: x% = TextBreak
+                CASE 1: x% = TextBreak + FIX((Right - TextBreak - LEN(a$) + 1) / 2)
+                CASE 2: x% = Right - LEN(a$) + 1
+            END SELECT
+
+            LOCATE TextScale + dwn, x%
+            PRINT a$;
+
+            dwn = dwn + 1
+        END IF
+LOOP UNTIL t >= LEN(Text$)
+TextScale = TextScale + dwn
+
+
+END SUB
+
+SUB EraseCombo
+
+CLOSE ComboTemp
+OPEN "c:\laos\dosserv.tmp" FOR BINARY AS ComboTemp
+CLOSE ComboTemp
+KILL "c:\laos\dosserv.tmp"
+OPEN "c:\laos\dosserv.tmp" FOR RANDOM AS ComboTemp
+
+ERASE Combo
+
+END SUB
+
+SUB ExitBox (x, y)
+IF x = -1 THEN x = EBox.left
+IF y = -1 THEN y = EBox.top
+LINE (x, y)-(x + 26, y + 20), Fensterfarbe, B
+LINE (x + 1, y + 1)-(x + 25, y + 1), Schattenfarbe
+LINE (x + 1, y + 1)-(x + 1, y + 19), Schattenfarbe
+LINE (x, y + 21)-(x + 26, y + 21), Randfarbe
+LINE (x + 27, y + 21)-(x + 27, y), Randfarbe
+
+LINE (x + 2, y + 19)-(x + 24, y + 2), Fensterfarbe
+LINE (x + 3, y + 19)-(x + 25, y + 2), Schattenfarbe
+LINE (x + 2, y + 2)-(x + 24, y + 19), Fensterfarbe
+LINE (x + 3, y + 2)-(x + 25, y + 19), Schattenfarbe
+
+END SUB
+
+SUB FileCopy (Source$, Dest$)
+
+errorlevel = 0
+f% = FREEFILE
+OPEN Source$ FOR BINARY AS f%
+ whole = LOF(f%) \ 5000
+ part = LOF(f%) MOD 5000
+ buffer$ = STRING$(5000, 0)
+ start& = 1
+
+f2% = FREEFILE
+OPEN Dest$ FOR BINARY AS f2%
+IF LOF(f2%) > 0 THEN 'Datei existiert schon
+    Register 8, 20, 16, 60, "Kopieren..."
+    echo ""
+    echo "Die Datei " + RTRIM$(UCASE$(Dest$)) + " existiert schon. Soll sie Åberschrieben werden?"
+    echo ""
+    ExitBox -1, -1
+    a$ = InputBox(0, 0, "", 4, 1)
+    IF LCASE$(a$) <> "ja" THEN errorlevel = 2: EXIT SUB
+END IF
+
+Register 8, 20, 15, 60, "Kopieren..."
+echo ""
+echo " " + UCASE$(Source$)
+echo ""
+echo "nach " + UCASE$(Dest$)
+
+CLOSE f2%: KILL Dest$ 'stellt sicher, dass Dest$ leer ist.
+OPEN Dest$ FOR BINARY AS f2%
+  FOR x = 1 TO whole
+       GET f%, start&, buffer$
+       PUT f2%, start&, buffer$
+       start& = start& + 5000
+     p% = INT(100 * LOF(f2%) / LOF(f%))
+     ProgressBar p%
+  NEXT x
+
+ buffer$ = STRING$(part, 0)
+  GET f%, start&, buffer$
+  PUT f2%, start&, buffer$
+p% = INT(100 * LOF(f2%) / LOF(f%))
+ProgressBar p%
+
+IF errorlevel THEN Dialog "Beim kopieren der Datei ist ein Fehler aufgetreten."
+
+CLOSE f%, f2%
+
+END SUB
+
+SUB Frame
+'Frame kann ausgefÅhrt werden, um ein Rahmen um das Fenster zu machen,
+'und dabei aber die Left- Top- usw.-Kordinaten zu behalten.
+'einzig die TextScale- und TextBreak- Koordinaten wechseln nach oben links.
+'-> Siehe auch die Sub "CLW".
+
+FrameWindow 0, 0, 638, 348, 0
+
+'EBox.left = 603: EBox.top = 321
+'Left = 2: Top = 2: Right = 79: Down = 24
+TextScale = 2: TextBreak = 2
+END SUB
+
+SUB FrameWindow (a, B, c, d, Loesch)
+'Erstellt ein Fenster, ohne dabei die Umgebungsvariablen zu verÑndern
+
+'Fenster:
+IF Loesch = 1 THEN LINE (a, B)-(c, d), 0, BF
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+END SUB
+
+FUNCTION Gerade (Zahl)
+IF Zahl / 2 - FIX(Zahl / 2) = 0 THEN Gerade = 1:  ELSE Gerade = 0
+END FUNCTION
+
+FUNCTION GetCombo$ (Box, Index)
+i = Index
+
+IF Index < 101 THEN
+GetCombo = Combo(Box, Index)
+ELSE
+IF Box = 2 THEN EXIT FUNCTION
+
+i = Index - 100
+
+GET ComboTemp, i, GetCombo
+
+END IF
+
+END FUNCTION
+
+FUNCTION GetDir$
+
+TimeLock (1)
+EraseCombo
+IF LEN(Pfad) > 3 THEN CHDIR Pfad ELSE CHDIR "\"
+
+SHELL "dir /b /a:d /o:n >c:\laos\mirror.bnk"
+TimeLock (0)
+CLOSE 1: OPEN "c:\laos\mirror.bnk" FOR INPUT AS 1
+
+IF LEN(Pfad) > 3 THEN
+i = 1
+SetCombo 2, 1, ".."
+ELSE i = 0
+END IF
+
+z = TIMER + .2
+TimeLock 1
+
+DO WHILE EOF(1) = 0
+LINE INPUT #1, a$
+IF LEN(a$) <= 8 THEN i = i + 1: SetCombo 2, i, a$
+
+IF TIMER >= z THEN z = TIMER + .2: TimeLock 1
+LOOP
+
+CLOSE 1
+TimeLock 0
+
+a$ = Pfad
+Register 14, 50, 24, 78, a$
+Top = Top + 1: Left = Left + 1: Right = Right - 1
+
+
+GetDir = RTRIM$(LEFT$(ComboBox(2, 0, 0, 0, 0), 12))
+
+
+END FUNCTION
+
+SUB GetInp
+DIM kbd AS STRING
+'Aktiviere das Control mit dem Fokus:
+SELECT CASE ControlConnect
+CASE 0: Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+CASE 2: Activate Symbollist(SymbolNr)
+END SELECT
+
+
+DO
+FOR i = 15 TO 19: KEY(i) ON: NEXT i
+IF InfoTime > 0 THEN
+TIMER ON
+ON TIMER(InfoTime) GOSUB TimeEreignis
+END IF
+  FOR i = 1 TO 4
+    AlteZeit(i) = TIMER
+  NEXT i
+kbd = ""
+ WHILE kbd = ""
+  kbd = INKEY$
+   FOR i = 1 TO 4
+     IF StoppUhr(i) > 0 THEN
+       IF TIMER - AlteZeit(i) > StoppUhr(i) THEN StoppUhrBeep (i): AlteZeit(i) = TIMER
+     END IF
+   NEXT i
+ WEND
+TIMER OFF: FOR i = 15 TO 19: KEY(i) OFF: NEXT i
+
+SELECT CASE kbd
+CASE CHR$(0) + "G": DO: a$ = Activ: LastControl: LOOP UNTIL a$ = Activ OR INKEY$ <> ""
+CASE CHR$(0) + "O": DO: a$ = Activ: NextControl: LOOP UNTIL a$ = Activ OR INKEY$ <> ""
+CASE CHR$(0) + ">": WindowState
+CASE CHR$(0) + "T": ShowInfo 'Manueller Q-Info-Abruf mit Shift+F1
+CASE CHR$(13)
+SELECT CASE ControlConnect
+CASE 0: Focus = MID$(ControlList(ControlNr), 5)
+CASE 1: Focus = MID$(MenuList(MenuNr), 5)
+CASE 2: Focus = MID$(Symbollist(SymbolNr), 19)
+END SELECT
+keyb = kbd
+EXIT SUB
+CASE CHR$(9) 'Tab
+STATIC ch AS INTEGER
+
+Activate CHR$(0) 'Aktiviere ein Control, das gar nicht existiert, um alle
+                 'anderen zu deaktivieren.
+ControlConnect = ControlConnect + 1
+IF ControlConnect > 2 THEN ControlConnect = 0
+FOR i = 1 TO 3
+SELECT CASE ControlConnect
+CASE 0: IF ControlList(1) = "" THEN ControlConnect = 1
+CASE 1: IF Change(ch + 1) <> 0 THEN ControlConnect = 0: EXIT FOR
+        IF MenuList(1) = "" THEN ControlConnect = 2
+CASE 2: IF Symbollist(1) = "" THEN ControlConnect = 0
+END SELECT
+NEXT i
+SELECT CASE ControlConnect
+CASE 0
+ch = ch + 1
+IF Change(ch) = 0 THEN ch = 0: ControlNr = 1
+IF ch <> 0 THEN ControlNr = Change(ch)
+Activate MID$(ControlList(ControlNr), 5)
+CASE 1: Activate MenuList(MenuNr)
+CASE 2: Activate Symbollist(SymbolNr)
+END SELECT
+CASE CHR$(0) + "H", CHR$(0) + "K": LastControl
+CASE CHR$(0) + "P", CHR$(0) + "M": NextControl
+CASE CHR$(27)
+keyb = "esc": EXIT SUB'Minimize
+END SELECT
+LOOP
+
+END SUB
+
+FUNCTION GetKey$
+a$ = "": WHILE a$ = "": a$ = INKEY$: WEND
+
+SELECT CASE MID$(a$, 2)
+CASE "H": a$ = "up"
+CASE "P": a$ = "down"
+CASE "K": a$ = "left"
+CASE "M": a$ = "right"
+CASE "R": a$ = "insert"
+CASE "S": a$ = "delete"
+CASE "G": a$ = "home"
+CASE "O": a$ = "end"
+CASE "I": a$ = "pageup"
+CASE "Q": a$ = "pagedown"
+CASE "B": IF ActivCombo = 1 THEN K8'F8 wurde gedrÅckt.
+CASE "?": IF ActivItem <> ".." THEN K5
+CASE "A": IF ActivCombo = 1 THEN PCOPY 0, 1: K7: PCOPY 1, 0: Refresh = 1
+CASE "@": IF ActivCombo = 1 THEN K6
+CASE "C": IF ActivCombo = 1 THEN K9
+CASE CHR$(27): a$ = "esc"
+END SELECT
+
+LOCATE TextScale, TextBreak
+GetKey = a$
+keyb = a$
+END FUNCTION
+
+FUNCTION GetPath$
+
+7 Refresh = 0
+
+TimeLock (1)
+EraseCombo
+SHELL "dir " + Pfad + "\*" + Suffix + " /b /a:-d /o:n >c:\laos\mirror.bnk"
+TimeLock (0)
+CLOSE 1: OPEN "c:\laos\mirror.bnk" FOR INPUT AS 1
+Register 3, 3, 20, 48, Pfad + " *" + Suffix
+Top = Top + 1: Left = Left + 1: Right = Right - 1
+
+z = TIMER + .2
+TimeLock 1
+i = 0
+DO WHILE EOF(1) = 0
+LINE INPUT #1, f$
+
+IF LEN(f$) <= 12 THEN
+i = i + 1
+IF i > 32000 THEN Dialog "Es sind zuviele Dateien im Verzeichnis, um alle darstellen  zu kînnen. Ver- Ñndern Sie den Dateizusatz, um die Auswahl einzuschrÑnken.": EXIT DO
+SetCombo 1, i, f$ + SPACE$(20 - LEN(f$))
+END IF
+
+IF TIMER >= z THEN z = TIMER + .2: TimeLock 1
+
+LOOP
+
+CLOSE 1
+TimeLock 0
+
+GetPath = RTRIM$(LEFT$(ComboBox(1, 0, 0, 0, 0), 12))
+IF Refresh = 1 THEN 7
+END FUNCTION
+
+SUB GetSymb (x, y, Name$, Kennung$)
+
+IF LEN(Kennung$) < 4 THEN Symb.left = Symb.left + 4 - LEN(Kennung$)
+IF x = -1 THEN
+IF Symb.left = 0 THEN Symb.left = Left
+x = (Symb.left - 2 + LEN(Kennung$) / 2) * 8
+END IF
+IF y = -1 THEN
+IF Symb.top = 0 THEN Symb.top = Top
+y = Symb.top * 14
+END IF
+IF x > Right * 8 - 41 THEN x = (Left - 2 + LEN(Kennung$) / 2) * 8: Symb.left = Left: Symb.top = Symb.top + 4 + IconVerticalSpace: y = Symb.top * 14
+IF y > Down * 14 - 68 THEN y = Top * 14
+VIEW (x, y)-(x + 40, y + 40), SymbolColor, SymbolFrame
+Spalten = (INT(x / 8)) + 4 - CINT(LEN(Kennung$) / 2)
+IF Spalten <= 1 THEN Spalten = 2
+IF Spalten + LEN(Kennung$) > Right THEN Spalten = Right - LEN(Kennung$)
+IF Spalten < Left THEN Kennung$ = LEFT$(Kennung$, LEN(Kennung$) - ((Left - Spalten) + 1)): Spalten = Left + 1
+LOCATE INT((y + 40) / 14) + 2, Spalten: PRINT Kennung$
+Symb.left = Spalten + LEN(Kennung$)
+
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+
+CLOSE 1: OPEN Pfad + "\" + Name$ FOR BINARY AS 1
+
+DIM Bef2(5) AS SINGLE
+i = 0
+DO
+
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3)
+CASE "m": PAINT (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4)
+CASE "l": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), B
+CASE "b": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), BF
+CASE "k": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), , , Befehle(i, 5)
+CASE "x": FOR Nr = 0 TO 5
+                GET 1, , Bef2(Nr)
+          NEXT
+          CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), Bef2(1), Bef2(2), Befehle(i, 5)
+
+END SELECT
+
+LOOP WHILE Befehle(i, 0) <> 0
+
+ControlConnect = 2 'Setzt den Verweis auf das Symbol-Steuerelement
+VIEW 'Setzt das Darstellungsfeld wieder auf den ganzen Bildschirm.
+Eintragen:
+
+x$ = MID$(STR$(x), 2)
+IF LEN(x$) < 5 THEN x$ = STRING$(5 - LEN(x$), "0") + x$
+y$ = MID$(STR$(y), 2)
+IF LEN(y$) < 5 THEN y$ = STRING$(5 - LEN(y$), "0") + y$
+IF LEN(Name$) < 8 THEN Name$ = Name$ + STRING$(8 - LEN(Name$), " ")
+a$ = x$ + y$ + Name$ + Kennung$
+i = 0
+DO: i = i + 1
+IF Symbollist(i) = a$ THEN GOTO 1.5
+LOOP UNTIL Symbollist(i) = ""
+Symbollist(i) = a$
+SymbolNr = 1
+
+
+1.5 Activ = Kennung$
+
+END SUB
+
+SUB GraphicView (a, B, c, d)
+'Diese Sub Ñndert die Umgebungsvariablen (Left, Top, usw.) fÅr einen bestimmt-
+'en Fenster-Bereich. Die darauffolgenden Grafikausgaben erfolgen in diesem
+'Bereich.
+'LINE (a, B)-(c, d), Randfarbe, B
+
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+END SUB
+
+SUB Info (Control$, InfoText$)
+SHARED QuickInfos() AS STRING
+i = 0
+DO
+i = i + 1
+IF MID$(ControlList(i), 5) = Control$ THEN EXIT DO
+IF MID$(MenuList(i), 5) = Control$ THEN EXIT DO
+LOOP
+QuickInfos(i) = InfoText$
+END SUB
+
+SUB Initialisiere (File$)
+TimeLock (1)
+AlteZeit = TIMER
+
+CLOSE 1, 2: OPEN File$ FOR INPUT AS 1
+OPEN "c:\laos\ZWA.tmp" FOR OUTPUT AS 2
+       
+        DO WHILE EOF(1) = 0
+         LINE INPUT #1, a$
+         B$ = LCASE$(a$)
+         istr = INSTR(B$, "system")
+          IF istr > 1 THEN
+           IF MID$(B$, istr - 1, 1) = "" OR MID$(B$, istr - 1, 1) = " " THEN
+            IF INSTR(istr, B$, CHR$(34)) = 0 THEN 'PrÅfen, ob nach "SYSTEM" ein Schlusszeichen kommt.
+             a$ = LEFT$(a$, istr - 1) + "KILL " + CHR$(34) + "c:\laos\ZWA.tmp" + CHR$(34) + ": " + "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34) + ": " + MID$(a$, istr + 6)
+            END IF
+           END IF
+          ELSEIF istr = 1 THEN a$ = LEFT$(a$, istr - 1) + "KILL " + CHR$(34) + "c:\laos\zwa.tmp" + CHR$(34) + ": " + "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34) + ": " + MID$(a$, istr + 6)
+          END IF
+
+         istr = INSTR(B$, "end")
+          DO WHILE istr <> 0
+          IF istr <> 0 AND MID$(B$, istr + 3) = "" THEN
+           IF istr > 1 THEN
+            IF MID$(B$, istr - 1, 1) = "" OR MID$(B$, istr - 1, 1) = " " THEN
+             a$ = LEFT$(a$, istr - 1) + "KILL " + CHR$(34) + "c:\laos\zwa.tmp" + CHR$(34) + ": " + "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34)
+            END IF
+            ELSE a$ = LEFT$(a$, istr - 1) + "KILL " + CHR$(34) + "c:\laos\zwa.tmp" + CHR$(34) + ": " + "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34)
+           END IF
+          END IF
+          istr = INSTR(istr + 3, B$, "end")
+          LOOP
+
+         PRINT #2, a$
+         IF TIMER - AlteZeit > .5 THEN AlteZeit = TIMER: TimeLock (1)
+        LOOP
+      
+         PRINT #2, "KILL " + CHR$(34) + "c:\laos\zwa.tmp" + CHR$(34) + ": " + "CHAIN " + CHR$(34) + "c:\laos\dosserv.lao" + CHR$(34)
+
+CLOSE 1, 2
+CLW
+
+CHAIN "c:\laos\zwa.tmp"
+END SUB
+
+FUNCTION InputBox$ (Zeilen, Spalten, Text$, Break, MaxDown)
+'Break=Zeilenumbruch | MaxDown=Maximale Zeilen
+IF Text$ = CHR$(0) THEN HidePasswordChar = -1: Text$ = ""
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Break = 0 OR Break > Right - Spalten THEN Break = Right - Spalten
+IF MaxDown = 0 THEN MaxDown = 24 - Zeilen
+TotalBreak = Break
+Texta$ = Text$: a$ = ""
+GOTO Deletefirst
+
+lesen:
+a$ = GetKey
+
+IF a$ = CHR$(13) THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = "up" OR a$ = "down" OR a$ = "left" OR a$ = "right" OR a$ = "tab" THEN InputBox$ = Texta$: GOTO delcur
+IF a$ = CHR$(27) THEN keyb = "esc": InputBox$ = Texta$: GOTO delcur
+IF a$ = CHR$(8) THEN
+IF LEN(Texta$) > 0 THEN Texta$ = LEFT$(Texta$, LEN(Texta$) - 1)
+LINE (a, B)-(c + 1, d + 1), 0, BF
+a$ = ""
+END IF
+IF dwn > MaxDown THEN a$ = "": nocur = 1
+
+IF LEN(a$) = 1 THEN Texta$ = Texta$ + a$
+Break = LEN(Texta$) + 1
+
+Deletefirst:
+Break = LEN(Texta$) + 1
+dwn = INT(LEN(Texta$) / TotalBreak) + 1
+IF Break > TotalBreak THEN Break = TotalBreak: nocur = 1
+IF LEN(Texta$) < (INT(LEN(Texta$) / TotalBreak) + 1) * TotalBreak AND LEN(Texta$) > INT(LEN(Texta$) / TotalBreak) * TotalBreak THEN nocur = 0
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Texta$) / Break + 1)
+IF dwn > MaxDown AND MaxDown > 1 THEN EndZeile = EndZeile - 1
+IF Break = LEN(Texta$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+FrameWindow a, B, c, d, 1
+
+
+ecr = TotalBreak * -1 + 1
+FOR i = 1 TO INT(LEN(Texta$) / TotalBreak) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + TotalBreak
+IF HidePasswordChar THEN PRINT MID$(STRING$(LEN(Texta$), "*"), ecr, TotalBreak);  ELSE PRINT MID$(Texta$, ecr, TotalBreak);
+NEXT i
+ecr = 0
+
+IF nocur = 0 THEN LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14 - 14), InfoColor, BF ELSE nocur = 0
+GOTO lesen
+
+delcur:
+LINE (POS(0) * 8, CSRLIN * 14)-(POS(0) * 8 - 8, CSRLIN * 14 - 14), 0, BF
+
+END FUNCTION
+
+SUB K5
+IF ActivCombo = 1 THEN
+        Register 8, 7, 15, 46, "Datei lîschen"
+        ExitBox -1, -1
+        echo "Sind Sie sicher, dass sie die Datei"
+        COLOR InfoColor: echo LEFT$(ActivItem, 12)
+        COLOR Farbe: echo "lîschen mîchten?"
+        a$ = InputBox(13, 0, "", 4, 1)
+        IF keyb = "esc" THEN EXIT SUB
+        IF LCASE$(a$) <> "ja" THEN EXIT SUB
+        KILL Pfad$ + "\" + LEFT$(ActivItem, 12)
+        Refresh = 1
+ELSE
+        Register 8, 7, 15, 46, "Verzeichnis lîschen"
+        ExitBox -1, -1
+        echo "Soll das Verzeichnis"
+        COLOR InfoColor: echo LEFT$(ActivItem, 12)
+        COLOR Farbe: echo "gelîscht werden?"
+        a$ = InputBox(13, 0, "", 4, 1)
+        IF keyb = "esc" THEN EXIT SUB
+        Show = 1: p$ = GetPath: Show = 1: p$ = GetDir
+        IF LCASE$(a$) <> "ja" THEN EXIT SUB
+        RMDIR Pfad + "\" + ActivItem
+        Show = 1: p$ = GetDir
+END IF
+END SUB
+
+SUB K6
+Register 8, 7, 13, 46, "Datei suchen"
+ExitBox -1, -1
+echo "Geben Sie die zu suchende Datei ein:"
+a$ = InputBox(11, 0, "", 12, 1)
+
+IF keyb = "esc" THEN EXIT SUB
+
+a$ = UCASE$(a$): TimeLock (1)
+
+SHELL "dir \" + a$ + " /b /a:-d /o:n /s >c:\laos\sucherg.tmp"
+CLOSE 1: OPEN "c:\laos\sucherg.tmp" FOR INPUT AS 1
+
+TimeLock (0)
+
+EraseCombo
+i = 1
+IF EOF(1) <> 0 THEN Dialog "Es wurden keine entsprechenden Dateien gefunden.": Refresh = 1: EXIT SUB
+TimeLock (1)
+
+LINE INPUT #1, B$
+SetCombo 1, 1, B$
+  p$ = Negpath(B$ + "\")
+  Pfad = p$
+   IF LEN(p$) < 3 THEN p$ = p$ + "\"
+  CHDIR p$
+
+DO WHILE EOF(1) = 0
+LINE INPUT #1, B$
+i = i + 1
+IF i < 32001 THEN SetCombo 1, i, B$
+LOOP
+
+TimeLock (0)
+
+Register 3, 3, 20, 48, "Suchergebnis:"
+Top = Top + 1: Left = Left + 1: Right = Right - 1
+
+Suffix = ".*"
+ch$ = ComboBox(1, 0, 0, 0, 0)
+   p$ = Negpath(ch$ + "\")
+   Pfad = p$
+   IF LEN(p$) < 3 THEN p$ = p$ + "\"
+  CHDIR p$
+
+EraseCombo
+ActivItem = MID$(ch$, LEN(Negpath(ch$ + "\")) + 2)
+Refresh = 1
+Show = 1: a$ = GetDir
+END SUB
+
+SUB K7
+Datei$ = RTRIM$(LEFT$(ActivItem, 12))
+
+OldPath$ = Pfad
+
+IF UCASE$(RIGHT$(RTRIM$(Datei$), 4)) = ".BAS" OR UCASE$(RIGHT$(RTRIM$(Datei$), 4)) = ".LAO" THEN
+
+Register 3, 3, 20, 48, Pfad
+
+Register 6, 7, 18, 46, Datei$ + " in LaOS aufnehmen"
+ExitBox -1, -1
+echo ""
+echo "Bitte wÑhlen Sie einen Ordner:"
+
+DIM DriveIn AS STRING * 1
+71
+Indrive = 0
+SHELL "C:"
+CHDIR "\LAOS"
+DriveIn = "c"
+EraseCombo
+ON ERROR GOTO fehlernext
+CLOSE 1: OPEN "drvlist.bnk" FOR RANDOM AS 1
+'vorhanden-Test
+p = 0
+f = FREEFILE: OPEN "c:\laos\lwmap.tmp" FOR RANDOM AS f
+DO
+    GET 1, , LNam$
+    IF LNam$ = "" THEN EXIT DO
+    errorlevel = 0
+    nf = FREEFILE
+    lw$ = LEFT$(LNam$, 1): OPEN lw$ + ":\LAOS\nul" FOR BINARY AS nf: CLOSE nf
+    IF errorlevel = 0 THEN 'LW vorhanden:
+        PUT f, , lw$
+        p = p + 1
+
+        OPEN lw$ + ":\laos\medname.inf" FOR RANDOM AS nf
+        GET nf, 1, B$
+        IF B$ = "" THEN B$ = MID$(LNam$, 4)
+        SetCombo 2, p, B$
+        CLOSE nf
+    END IF
+LOOP UNTIL LNam$ = ""
+CLOSE f
+
+72
+othDrives = p
+
+CLOSE 1: OPEN "\laos\ordner.bnk" FOR RANDOM AS 1
+
+FOR i = p + 1 TO p + 99 - othDrives
+GET 1, , v$
+SetCombo 2, i, v$
+NEXT
+
+InOrdner$ = ComboBox(2, 10, 9, 17, 40)
+IF keyb = "esc" AND Indrive = 0 THEN
+    SwapDir OldPath$: lw$ = "c": Pfad = "C:\LAOS": Refresh = 1: EXIT SUB
+ELSEIF keyb = "esc" AND Indrive = 1 THEN
+GOTO 71
+END IF
+
+IF Choice <= othDrives THEN 'fremdes LW angewÑhlt
+    f = FREEFILE: OPEN "c:\laos\lwmap.tmp" FOR RANDOM AS f
+    GET f, Choice, lw$
+    DriveIn = lw$
+    CLOSE f
+    SHELL lw$ + ":"
+    CHDIR "\LAOS"
+    p = 0
+    Indrive = 1
+    EraseCombo
+    GOTO 72
+END IF
+
+IF UCASE$(RIGHT$(RTRIM$(Datei$), 4)) = ".LAO" THEN
+
+IF LEFT$(LCASE$(OldPath$), 1) <> LCASE$(DriveIn) OR MID$(LCASE$(OldPath$), 3) <> "\laos" THEN
+    FileCopy OldPath$ + "\" + Datei$, DriveIn + ":\laos\" + Datei$
+    IF errorlevel = 2 THEN SwapDir OldPath$: EXIT SUB
+END IF
+
+IF keyb = "esc" THEN Dialog "Abbruch durch Benutzer": SwapDir OldPath$: EXIT SUB
+GOTO Make
+END IF
+
+Register 6, 7, 18, 46, Datei$ + " in LaOS aufnehmen"
+echo "": echo "Bitte warten, ich initialisiere dass Programm..."
+TimeLock (1)
+AlteZeit = TIMER
+
+CLOSE 1, 2: OPEN Pfad + "\" + Datei$ FOR INPUT AS 1
+OPEN DriveIn + ":\laos\" + LEFT$(Datei$, INSTR(Datei$, ".")) + "lao" FOR OUTPUT AS 2
+
+        DO WHILE EOF(1) = 0
+         LINE INPUT #1, a$
+         B$ = LCASE$(a$)
+        
+         istr = INSTR(B$, "system")
+          IF istr > 1 THEN
+           IF MID$(B$, istr - 1, 1) = "" OR MID$(B$, istr - 1, 1) = " " THEN
+            IF INSTR(istr, B$, CHR$(34)) = 0 THEN 'PrÅfen, ob nach "SYSTEM" ein Schlusszeichen kommt.
+             a$ = LEFT$(a$, istr - 1) + "CHAIN " + CHR$(34) + "c:\laos\run.bas" + CHR$(34) + ": " + MID$(a$, istr + 6)
+            END IF
+           END IF
+          ELSEIF istr = 1 THEN a$ = LEFT$(a$, istr - 1) + "CHAIN " + CHR$(34) + "c:\laos\run.bas" + CHR$(34)
+          END IF
+
+         istr = INSTR(B$, "end")
+         DO WHILE istr <> 0
+          IF istr <> 0 AND MID$(B$, istr + 3) = "" THEN
+           IF istr > 1 THEN
+            IF MID$(B$, istr - 1, 1) = "" OR MID$(B$, istr - 1, 1) = " " THEN
+             a$ = LEFT$(a$, istr - 1) + "CHAIN " + CHR$(34) + "c:\laos\run.bas" + CHR$(34)
+            END IF
+            ELSE a$ = LEFT$(a$, istr - 1) + "CHAIN " + CHR$(34) + "c:\laos\run.bas" + CHR$(34)
+           END IF
+          END IF
+         istr = INSTR(istr + 3, B$, "end")
+         LOOP
+
+         PRINT #2, a$
+         IF TIMER - AlteZeit > .5 THEN AlteZeit = TIMER: TimeLock (1)
+        LOOP
+        
+         PRINT #2, "CHAIN " + CHR$(34) + "c:\laos\run.bas" + CHR$(34)
+
+CLOSE 1, 2
+TimeLock (0)
+Make:
+
+Register 6, 7, 18, 46, Datei$ + " in LaOS aufnehmen"
+echo "": echo "Geben Sie bitte ein, wie Sie das Pro- gramm nennen wollen:"
+Kennung$ = InputBox(11, 0, "", 32, 1)
+IF Kennung$ = "" THEN Dialog "Programmbezeichnung erforderlich!": GOTO Make
+Register 6, 7, 18, 46, Datei$ + " in LaOS aufnehmen"
+echo "": echo "Sie kînnen hier das Dateiinfo angeben:"
+DInfo$ = InputBox(11, 0, "", 32, 8)
+
+
+Register 6, 7, 18, 46, Datei$ + " in LaOS aufnehmen: Symbol wÑhlen"
+
+ClearControls (3)
+
+TimeLock (1)
+SHELL "dir c:\laos\*.lsb /b /o:n >c:\laos\mirror.bnk"
+CLOSE 1: OPEN "c:\laos\mirror.bnk" FOR INPUT AS 1
+DO WHILE EOF(1) = 0
+LINE INPUT #1, a$
+a$ = LEFT$(a$, INSTR(a$, ".") - 1): LoadSymbol a$, a$
+LOOP
+TimeLock (0)
+
+echo "Bitte wÑhlen Sie ein Symbol aus:"
+ShowSymbols
+GetInp
+
+  Symbol$ = Focus
+
+IF LCASE$(DriveIn) <> "c" THEN
+ClearControls 3
+Register 8, 5, 18, 76, ""
+echo "Mîchten Sie das Symbol auf den DatentrÑger kopieren?"
+echo ""
+echo "WÑhlen Sie Nein aus, falls Sie den DatentrÑger nur fÅr Ihren Computer"
+echo "benutzen wollen, wÑhlen Sie Ja aus, falls sie ihn an andere Benutzer"
+echo "weitergeben wollen."
+PRINT Control(16, 20, "        Ja         ")
+PRINT Control(16, 42, "       Nein        ")
+GetInp
+IF Focus = "        Ja         " THEN
+    FileCopy "c:\laos\" + Symbol$ + ".lsb", DriveIn + ":\laos\" + Symbol$ + ".lsb"
+END IF
+END IF
+
+OpenFile LEFT$(Datei$, INSTR(Datei$, ".") - 1), Symbol$, Kennung$, InOrdner$, "Programm", DInfo$
+
+ELSE
+Dialog "Dies ist keine QBasic-Datei. QBasic-Dateien mÅssen mit .bas enden."
+END IF
+Refresh = 1
+
+SwapDir OldPath$
+END SUB
+
+SUB K8
+Register 8, 10, 13, 45, "Dateizusatz"
+ExitBox -1, -1
+echo "Geben Sie den Dateizusatz ein:"
+echo ""
+echo " *."
+a$ = InputBox(11, 15, "", 3, 1)
+IF keyb = "esc" THEN EXIT SUB
+Suffix = "." + a$
+
+CLOSE 1: OPEN "c:\laos\suffix.lcn" FOR RANDOM AS 1 'Suffix sichern:
+PUT 1, 1, Suffix: CLOSE 1
+
+LOCATE 8, 75: PRINT Suffix + SPACE$(4 - LEN(Suffix))
+Refresh = 1
+END SUB
+
+SUB K9
+91
+Register 8, 10, 13, 45, "Laufwerkswahl"
+ExitBox -1, -1
+echo "Geben Sie das Laufwerk ein:"
+lw$ = InputBox(11, 12, "", 1, 1)
+IF keyb = "esc" THEN EXIT SUB
+
+LOCATE 10, 70: PRINT UCASE$(lw$)
+Refresh = 1
+
+ON ERROR GOTO fehlernext
+errorlevel = 0
+OPEN lw$ + ":\nul" FOR RANDOM AS 1
+IF errorlevel = 1 THEN Dialog "Laufwerk oder DatentrÑger nicht bereit.": GOTO 91
+ON ERROR GOTO Fehler
+SHELL lw$ + ":"
+Pfad = UCASE$(lw$) + ":"
+Show = 1
+a$ = GetDir
+Show = 0
+END SUB
+
+SUB LastControl
+SELECT CASE ControlConnect
+CASE 0
+ControlNr = ControlNr - 1
+IF ControlNr < 1 THEN ControlNr = 1
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+p$ = Control(Zeilen, Spalten, Texta$)
+LOOP UNTIL a$ = ""
+CASE 1
+MenuNr = MenuNr - 1
+IF MenuNr < 1 THEN MenuNr = 1
+Activate MenuList(MenuNr)
+
+
+CASE 2
+Symb.pnr = Symb.pnr - 1
+SymbolNr = SymbolNr - 1
+IF SymbolNr < 1 THEN SymbolNr = 1: Symb.pnr = 1
+IF Symb.pnr < 1 THEN
+
+pagerows% = FIX((Down - Top - 4) / (IconVerticalSpace + 4)) + 1
+
+i = SymbolNr
+rows% = 0
+y2 = VAL(MID$(Symbollist(i), 6, 5))
+DO
+    i = i - 1
+    y = VAL(MID$(Symbollist(i), 6, 5))
+    IF y < y2 THEN
+        y2 = y
+        rows% = rows% + 1
+    END IF
+
+LOOP UNTIL rows% >= pagerows%
+
+DimNow = 1
+SymbolNr.old = SymbolNr
+SymbolNr = SymbolNr - ABS(i - SymbolNr)
+IF SymbolNr < 0 THEN SymbolNr = 0
+LINE (Left * 8 - 8, Top * 14 - 14)-(Right * 8, Down * 14), 0, BF
+ShowSymbols
+SymbolNr = SymbolNr.old
+Symb.pnr = Symb.count
+END IF
+Activate Symbollist(SymbolNr)
+
+END SELECT
+END SUB
+
+SUB LoadPicture (x AS INTEGER, y AS INTEGER, Bild$, Streck, anzeigen)
+'Ist anzeigen auf Wahr gesetzt (einen Wert <> 0), so wird das Bild auch
+'gleich angezeigt.
+
+IF Streck = 0 THEN Streck = 1
+
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+
+CLOSE 1: OPEN Bild$ FOR BINARY AS 1
+
+i = 0
+DO
+i = i + 1
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+LOOP WHILE Befehle(i, 0) <> 0
+i = 0
+
+IF anzeigen = 0 THEN EXIT SUB
+
+DO
+i = i + 1
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) * Streck + x, Befehle(i, 2) * Streck + y), Befehle(i, 3)
+CASE "m": PAINT (Befehle(i, 1) * Streck + x, Befehle(i, 2) * Streck + y), Befehle(i, 3)
+CASE "l": LINE (Befehle(i, 1) * Streck + x, Befehle(i, 2) * Streck + y)-(Befehle(i, 3) * Streck + x, Befehle(i, 4) * Streck + y), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) * Streck + x, Befehle(i, 2) * Streck + y)-(Befehle(i, 3) * Streck + x, Befehle(i, 4) * Streck + y), Befehle(i, 5), B
+CASE "k": CIRCLE (Befehle(i, 1) * Streck + x, Befehle(i, 2) * Streck + y), Befehle(i, 3) * Streck, Befehle(i, 4), , , Befehle(i, 5)
+END SELECT
+LOOP WHILE Befehle(i, 0) <> 0
+i = 0
+
+END SUB
+
+SUB LoadSymbol (Name$, Kennung$)
+Symb.total = Symb.total + 1
+
+'IF LEN(Kennung$) < 4 THEN Kennung$ = STRING$(INT((4 - LEN(Kennung$)) / 2), " ") + Kennung$ + STRING$(CINT((4 - LEN(Kennung$)) / 2 + .1), " ")
+IF LEN(Kennung$) < 4 THEN Kennung$ = Kennung$ + SPACE$(4 - LEN(Kennung$))
+
+
+IF Symb.left = 0 THEN Symb.left = Left
+IF Symb.top = 0 THEN Symb.top = Top
+
+x = (Symb.left - 2 + LEN(Kennung$) / 2) * 8
+y = Symb.top * 14
+
+IF x > Right * 8 - 41 THEN x = (Left - 2 + LEN(Kennung$) / 2) * 8: Symb.left = Left: Symb.top = Symb.top + 4 + IconVerticalSpace: y = Symb.top * 14
+'IF y > Down * 14 - 68 THEN y = Top * 14
+
+Symb.left = (INT(x / 8)) + 4 - CINT(LEN(Kennung$) / 2) + LEN(Kennung$)
+
+'Symbol eintragen:
+
+x$ = MID$(STR$(x), 2)
+IF LEN(x$) < 5 THEN x$ = STRING$(5 - LEN(x$), "0") + x$
+
+y$ = MID$(STR$(y), 2)
+IF LEN(y$) < 5 THEN y$ = STRING$(5 - LEN(y$), "0") + y$
+
+IF LEN(Name$) < 8 THEN Name$ = Name$ + STRING$(8 - LEN(Name$), " ")
+
+a$ = x$ + y$ + Name$ + RTRIM$(Kennung$)
+
+i = 0
+DO: i = i + 1: LOOP UNTIL Symbollist(i) = ""
+Symbollist(i) = a$
+SymbolNr = 0
+END SUB
+
+FUNCTION MakeWindow$ (a, B, c, d)
+
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+
+a$ = MID$(STR$(a), 2)
+IF LEN(a$) < 3 THEN a$ = STRING$(3 - LEN(a$), "0") + a$
+B$ = MID$(STR$(B), 2)
+IF LEN(B$) < 3 THEN B$ = STRING$(3 - LEN(B$), "0") + B$
+c$ = MID$(STR$(c), 2)
+IF LEN(c$) < 3 THEN c$ = STRING$(3 - LEN(c$), "0") + c$
+d$ = MID$(STR$(d), 2)
+IF LEN(d$) < 3 THEN d$ = STRING$(3 - LEN(d$), "0") + d$
+
+MakeWindow$ = a$ + B$ + c$ + d$
+EBox.left = c - 31: EBox.top = d - 24
+Left = INT(a / 8) + 2: Top = INT(B / 14) + 2: Right = INT((c + 8) / 8) - 1: Down = INT((d + 14) / 14) - 1
+END FUNCTION
+
+SUB Menuact (Menu$)
+Zeilen = VAL(LEFT$(Menu$, 2))
+Spalten = VAL(MID$(Menu$, 3, 2))
+Caption$ = MID$(Menu$, 5)
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17
+c = (Spalten + LEN(Caption$)) * 8 - 5: d = (Zeilen + 1) * 14 - 11
+
+
+IF Activ = Menu$ THEN
+LOCATE Zeilen, Spalten: PRINT Caption$
+Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+ELSE
+LINE (a + 1, B + 1)-(c - 1, B + 1), 0
+LINE (a + 1, B + 1)-(a + 1, d - 1), 0
+END IF
+END SUB
+
+SUB MenuBox (Zeilen, Spalten, Caption$)
+STATIC NMZeilen AS INTEGER, NMSpalten AS INTEGER
+IF NMZeilen = 0 THEN NMZeilen = Top
+IF NMSpalten = 0 THEN NMSpalten = Left
+IF Zeilen = 0 THEN Zeilen = NMZeilen
+IF Spalten = 0 THEN Spalten = NMSpalten
+
+IF Spalten + LEN(Caption$) - 1 > Right THEN Spalten = Left: Zeilen = Zeilen + 2
+IF Zeilen > Down THEN Zeilen = Top: Spalten = Left
+
+a = Spalten * 8 - 11: B = Zeilen * 14 - 17: c = (Spalten + LEN(Caption$)) * 8 - 5
+d = (Zeilen + 1) * 14 - 11
+
+'Lîschen:
+LINE (a, B)-(c, d), 0, BF
+LOCATE Zeilen, Spalten: PRINT Caption$
+'Fenster:
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+'LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+'LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+
+
+NMSpalten = Spalten + LEN(Caption$) + 2
+NMZeilen = Zeilen
+IF NMSpalten > Right THEN NMSpalten = Left: NMZeilen = Zeilen + 2
+IF NMZeilen > Down THEN NMZeilen = Top: NMSpalten = Left
+
+'Menu eintragen:
+Zeilen$ = MID$(STR$(Zeilen), 2)
+Spalten$ = MID$(STR$(Spalten), 2)
+IF LEN(Zeilen$) < 2 THEN Zeilen$ = "0" + Zeilen$
+IF LEN(Spalten$) < 2 THEN Spalten$ = "0" + Spalten$
+
+a$ = Zeilen$ + Spalten$ + Caption$
+i = 0
+DO: i = i + 1
+IF MenuList(i) = a$ THEN EXIT SUB
+LOOP UNTIL MenuList(i) = ""
+MenuList(i) = a$
+MenuNr = 1
+
+TextScale = Zeilen + 2
+END SUB
+
+FUNCTION MenuInt$ (Item$, Trennzeichen$)
+Item$ = Item$ + Trennzeichen$
+DIM MenuItem(1 TO 256) AS STRING
+
+i = 0
+MaxLenth = 1
+DO
+i = i + 1
+MenuItem(i) = Trim(Item$, Trennzeichen$, i)
+
+IF LEN(MenuItem(i)) > 77 THEN MenuItem(i) = LEFT$(MenuItem(i), 77)
+IF LEN(MenuItem(i)) > MaxLenth THEN MaxLenth = LEN(MenuItem(i))
+
+LOOP WHILE MenuItem(i) <> ""
+
+'MaxLenth = MaxLenth + 2 '2 Spalten sind reserviert fÅr die Pfeile
+
+Zeilen = VAL(LEFT$(MenuList(MenuNr), 2)) + 1
+Spalten = VAL(MID$(MenuList(MenuNr), 3, 2))
+IF Spalten + MaxLenth > 79 THEN Spalten = 79 - MaxLenth
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + MaxLenth
+EndZeile = Zeilen + 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+Groesse = 4 + INT(((PMAP(c + 1, 0) - PMAP(a, 0) + 1) * (1) + 7) / 8) * 4 * (PMAP(d + 1, 1) - PMAP(B, 1) + 1)
+DIM Hg(Groesse)
+GET (a, B)-(c + 1, d + 1), Hg
+
+
+i = 0
+DO
+
+IF i < 1 THEN i = 1
+IF MenuItem(i) = "" THEN i = i - 1
+IF i < 1 THEN i = 1
+
+PRINT TextBox(Zeilen, Spalten, MenuItem(i), MaxLenth)
+
+SELECT CASE GetKey
+CASE "up", "left": i = i - 1
+CASE "down", "right": i = i + 1
+CASE CHR$(13): MenuInt$ = MenuItem(i): Choice = i: EXIT DO
+CASE CHR$(27): MenuInt$ = "": Choice = 0: keyb = "esc": EXIT DO
+CASE ELSE
+END SELECT
+LOOP
+
+ERASE MenuItem
+PUT (a, B), Hg, PSET
+
+END FUNCTION
+
+FUNCTION Negpath$ (Way$)
+
+mcr = LEN(Way$)
+Nr = 0
+Mc2 = 0
+
+ DO
+   IF mcr < 1 THEN mcr = 3: EXIT DO
+   IF MID$(Way$, mcr, 1) = "\" THEN
+    IF Mc2 = 0 THEN Mc2 = mcr ELSE EXIT DO
+   END IF
+  mcr = mcr - 1
+ LOOP
+
+Negpath$ = LEFT$(Way$, mcr - 1)
+
+END FUNCTION
+
+SUB NextControl
+SELECT CASE ControlConnect
+CASE 0
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE ControlList(tC) <> ""
+tC = tC - 1
+
+ControlNr = ControlNr + 1
+IF ControlNr > tC THEN ControlNr = tC
+i = 0
+DO
+i = i + 1
+a$ = ControlList(i)
+Activ = MID$(ControlList(ControlNr), 5)
+Zeilen = VAL(MID$(a$, 1, 2))
+Spalten = VAL(MID$(a$, 3, 2))
+Texta$ = MID$(a$, 5)
+IF a$ = "" THEN EXIT DO
+p$ = Control(Zeilen, Spalten, Texta$)
+LOOP UNTIL a$ = ""
+CASE 1
+tC = 0: DO: tC = tC + 1: LOOP WHILE MenuList(tC) <> ""
+MenuNr = MenuNr + 1
+IF MenuNr > tC - 1 THEN MenuNr = tC - 1
+Activate MenuList(MenuNr)
+CASE 2
+tC = 0
+DO
+tC = tC + 1
+LOOP WHILE Symbollist(tC) <> ""
+SymbolNr = SymbolNr + 1: Symb.pnr = Symb.pnr + 1
+
+IF SymbolNr > tC - 1 THEN
+SymbolNr = tC - 1: Symb.pnr = Symb.pnr - 1
+ELSE
+IF Symb.pnr > Symb.count THEN
+DimNow = 1
+SymbolNr = SymbolNr - 1: Symb.pnr = Symb.pnr - 1
+LINE (Left * 8 - 8, Top * 14 - 14)-(Right * 8, Down * 14), 0, BF
+ShowSymbols
+END IF
+END IF
+Activate Symbollist(SymbolNr)
+END SELECT
+END SUB
+
+SUB OpenFile (Datei$, Symbol1$, Kennung$, InOrdner$, Art1$, FileInfo1$)
+
+CLOSE 1: OPEN "\laos\DATEIEN.BNK" FOR RANDOM AS #1 LEN = 400
+FIELD 1, 11 AS Dateiname$, 16 AS Art$, 11 AS Symbol$, 32 AS OsName$, 32 AS Ordner$, 11 AS Link$, 10 AS Datum$, 5 AS Zeit$, 1 AS Attribut$, 256 AS FileInfo$
+a = 0
+DO
+a = a + 1
+GET 1, a
+LOOP UNTIL Dateiname$ = STRING$(11, 0)
+
+IF Symbol1$ = "" THEN Symbol1$ = "sys"
+
+LSET Symbol$ = Symbol1$
+LSET Dateiname$ = Datei$
+LSET Art$ = Art1$
+LSET OsName$ = Kennung$
+LSET Ordner$ = InOrdner$
+LSET Link$ = Link1$
+LSET Datum$ = SDate
+LSET Zeit$ = TIME$
+LSET FileInfo$ = FileInfo1$
+PUT 1, a
+
+CLOSE 1
+
+END SUB
+
+SUB PartFormat (Text$, Setting$)
+
+IF INSTR(Text$, CHR$(0)) THEN
+    Setting$ = MID$(Text$, INSTR(Text$, CHR$(0)) + 1)
+    Text$ = LEFT$(Text$, INSTR(Text$, CHR$(0)) - 1)
+ELSE
+    Setting$ = ""
+END IF
+
+END SUB
+
+SUB ProgressBar (Stat AS INTEGER)
+SHARED aStat AS INTEGER
+
+'Die Anzeige wird nur generiert, falls der Status-Wert (Stat) seit dem
+'letzen Aufruf geÑndert hat:
+IF Stat = aStat THEN EXIT SUB
+
+IF Stat > 100 THEN Stat = 100
+
+LINE (179, 174)-(459, 194), Farbe, B
+
+x = 278 * Stat / 100
+
+LINE (180, 175)-(180 + x, 193), InfoColor, BF
+
+aStat = Stat
+
+
+END SUB
+
+SUB Register (z, s, zu, su, Text$)
+IF z = 0 THEN z = 1
+IF s = 0 THEN s = 1
+IF zu = 0 THEN zu = 25
+IF su = 0 THEN su = 80
+IF s + LEN(Text$) > su - 1 AND su - s > 2 THEN Text$ = LEFT$(Text$, su - s - 3) + ".."
+a = s * 8 - 4
+B = z * 14 - 9
+c = su * 8 - 7
+d = zu * 14 - 7
+'Fenster:
+LINE (a, B - 4)-(c, d), 0, BF
+LINE (a, B)-(c, d), Fensterfarbe, B
+'Schatten:
+LINE (a + 1, B + 1)-(c - 1, B + 1), Schattenfarbe
+LINE (a + 1, B + 1)-(a + 1, d - 1), Schattenfarbe
+'Rand:
+LINE (c + 1, d + 1)-(a, d + 1), Randfarbe
+LINE (c + 1, d + 1)-(c + 1, B), Randfarbe
+
+TextScale = INT(B / 14) + 2 '=Zeile
+TextBreak = INT(a / 8) + 2 '=Spalte
+LOCATE INT(B / 14) + 1, TextBreak
+PRINT Text$
+Break = su - 1
+IF z = 1 THEN LINE (0, 0)-(638, 0), Fensterfarbe: LINE (1, 1)-(637, 1), 0: LINE (1, 1)-(1, 347), 0
+EBox.left = c - 31: EBox.top = d - 24
+Left = s + 1: Top = z + 1: Right = su - 1: Down = zu - 1
+END SUB
+
+FUNCTION SDate$ 'Function fÅr das System-Datum
+SELECT CASE Datumsformat
+CASE 0'TT.MM.JJJJ
+SDate$ = MID$(DATE$, 4, 2) + "." + LEFT$(DATE$, 2) + "." + RIGHT$(DATE$, 4)
+CASE 1'MM-TT-JJJJ
+SDate$ = DATE$
+CASE 2'JJJJ/MM/TT
+SDate$ = RIGHT$(DATE$, 4) + "/" + LEFT$(DATE$, 2) + "/" + MID$(DATE$, 4, 2)
+END SELECT
+END FUNCTION
+
+SUB SetCombo (Box, Index, Wert AS STRING)
+i = Index
+
+IF Index < 101 THEN
+Combo(Box, Index) = Wert
+
+ELSE
+IF Box = 2 THEN EXIT SUB
+i = Index - 100
+
+PUT ComboTemp, i, Wert
+
+END IF
+
+END SUB
+
+SUB ShowInfo
+IF ControlConnect = 2 THEN EXIT SUB
+i = 0
+DO
+i = i + 1
+IF i > 500 THEN EXIT SUB
+IF MID$(ControlList(i), 5) = Activ OR MenuList(i) = Activ THEN EXIT DO
+LOOP
+IF QuickInfos(i) = "" THEN EXIT SUB
+IF Activ = MenuList(i) THEN
+z = VAL(LEFT$(MenuList(i), 2)) + 1 'Menu
+s = VAL(MID$(MenuList(i), 3, 2)) + 1
+ELSE
+z = VAL(LEFT$(ControlList(i), 2)) + 1 'Control
+s = VAL(MID$(ControlList(i), 3, 2)) + 1
+END IF
+IF s > Right THEN s = Right - LEN(MID$(ControlList(i), 5))
+
+IF z + INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1 > Down THEN z = Down - (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) + 1
+IF z < Top THEN
+s = Left + 1
+z = Down - INT(LEN(QuickInfos(i)) / (Right - s + 1))
+END IF
+
+REDIM BG(4 * 8 * 14 * 5) AS DOUBLE
+GET (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), BG
+LINE (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), 0, BF
+LINE (s * 8 - 9, z * 14 - 15)-(s * 8 + (Right - s) * 8, z * 14 - 14 + (INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1) * 14), InfoFrame, B
+
+
+ecr = (Right - s + 1) * -1 + 1
+FOR a = 1 TO INT(LEN(QuickInfos(i)) / (Right - s + 1)) + 1
+LOCATE z + a - 1, s
+ecr = ecr + Right - s + 1
+COLOR InfoColor: PRINT MID$(QuickInfos(i), ecr, Right - s + 1)
+NEXT
+COLOR Farbe
+ecr = 0
+a = 0
+i = 0
+SLEEP
+PUT (s * 8 - 9, z * 14 - 15), BG, PSET
+END SUB
+
+SUB ShowSymbols
+Symb.count = 0
+Symbol = SymbolNr
+DIM i AS INTEGER
+DIM Nr AS INTEGER
+
+IF Symbol = 0 THEN DimY = 0
+
+DO
+Symbol = Symbol + 1
+Symb.count = Symb.count + 1
+
+a$ = Symbollist(Symbol)
+IF a$ = "" THEN EXIT DO
+
+Name$ = MID$(a$, 11, 8)
+Kennung$ = MID$(a$, 19)
+IF LEN(Kennung$) < 4 THEN Kennung$ = STRING$(INT((4 - LEN(Kennung$)) / 2), " ") + Kennung$ + STRING$(CINT((4 - LEN(Kennung$)) / 2 + .1), " ")
+
+x = VAL(LEFT$(a$, 5))
+y = VAL(MID$(a$, 6, 5))
+IF DimNow = 1 THEN DimY = y - Top * 14: DimNow = 0
+y = y - DimY
+IF y > Down * 14 - 46 THEN DimNow = 1: EXIT DO'DimY = DimY + y - Top * 14: EXIT DO
+
+VIEW (x, y)-(x + 40, y + 40), SymbolColor, SymbolFrame
+Spalten = (INT(x / 8)) + 4 - CINT(LEN(Kennung$) / 2)
+IF Spalten <= 1 THEN Spalten = 2
+IF Spalten + LEN(Kennung$) > Right THEN Spalten = Right - LEN(Kennung$)
+IF Spalten <= Left THEN Kennung$ = LEFT$(Kennung$, LEN(Kennung$) - ((Left - Spalten) + 1)): Spalten = Left + 1
+LOCATE INT((y + 40) / 14) + 2, Spalten: PRINT Kennung$
+Symb.left = Spalten + LEN(Kennung$)
+
+CLOSE 1: OPEN "c:\laos\" + Name$ + ".lsb" FOR BINARY AS 1
+
+DIM Bef2(5) AS SINGLE
+i = 0
+DO
+
+FOR Nr = 0 TO 5
+GET 1, , Befehle(i, Nr)
+NEXT
+
+SELECT CASE CHR$(Befehle(i, 0))
+CASE "p": PSET (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3)
+CASE "m": PAINT (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4)
+CASE "l": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5)
+CASE "r": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), B
+CASE "b": LINE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus)-(Befehle(i, 3) + xplus, Befehle(i, 4) + yplus), Befehle(i, 5), BF
+CASE "k": CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), , , Befehle(i, 5)
+CASE "x": FOR Nr = 0 TO 5
+                GET 1, , Bef2(Nr)
+          NEXT
+          CIRCLE (Befehle(i, 1) + xplus, Befehle(i, 2) + yplus), Befehle(i, 3), Befehle(i, 4), Bef2(1), Bef2(2), Befehle(i, 5)
+
+END SELECT
+
+
+LOOP WHILE Befehle(i, 0) <> 0
+
+VIEW 'Setzt das Darstellungsfeld wieder auf den ganzen Bildschirm.
+LOOP
+IF a$ <> "" THEN Symb.ipp = Symb.count - 1
+Symb.total = Symbol - 1
+Symb.count = Symb.count - 1
+
+ControlConnect = 2 'Setzt den Verweis auf das Symbol-Steuerelement
+SymbolNr = Symb.total - Symb.count + 1
+Symb.pnr = 1
+END SUB
+
+SUB StoppUhrBeep (Uhr)
+SELECT CASE Uhr
+CASE 1: TimeLock (1)
+END SELECT
+END SUB
+
+SUB SwapDir (Pfad$)
+
+SHELL LEFT$(Pfad$, 1) + ":"
+CHDIR Pfad$
+
+END SUB
+
+SUB Symbact (Symbol$) 'Aktiviert ein Symbol
+x = VAL(MID$(Symbol$, 1, 5))
+y = VAL(MID$(Symbol$, 6, 5))
+IF DimNow = 1 THEN DimY = DimY + (y - Top * 14): DimNow = 0
+y = y - DimY
+
+IF Activ = Symbol$ THEN
+LINE (x - 2, y - 2)-(x + 42, y + 42), Symbolactiv, B, SymbactStil
+ELSE
+IF y >= Top * 14 AND y < Down * 14 - 46 THEN LINE (x - 2, y - 2)-(x + 42, y + 42), 0, B, SymbactStil
+END IF
+END SUB
+
+FUNCTION TextBox$ (Zeilen, Spalten, Text$, Break)
+'Break heisst hier: Hier wird der Text gebrochen (Zeilenumbruch)
+
+IF TextScale = 0 THEN TextScale = Top
+IF TextBreak = 0 THEN TextBreak = Left
+IF Zeilen = 0 THEN Zeilen = TextScale
+IF Spalten = 0 THEN Spalten = TextBreak + 1
+
+IF Zeilen > 24 THEN Zeilen = 24
+
+IF Break = 0 THEN Break = LEN(Text$)
+IF Break = 0 THEN Spalten = Spalten - 1: Break = 1
+
+
+a = Spalten * 8 - 11
+B = Zeilen * 14 - 17
+EndSpalte = Spalten + Break
+EndZeile = Zeilen + INT(LEN(Text$) / Break + 1)
+IF Break = LEN(Text$) THEN EndZeile = EndZeile - 1
+c = EndSpalte * 8 - 5
+d = EndZeile * 14 - 11
+
+Right.old = Right 'Merke mir die alten Zahlen, weil MakeWindow sie verÑndert.
+Down.old = Down
+Left.old = Left
+Top.old = Top
+Objekt1$ = MakeWindow(a, B, c, d)
+clearase (Objekt1$)
+Right = Right.old
+Down = Down.old
+Left = Left.old
+Top = Top.old
+ecr = Break * -1 + 1
+FOR i = 1 TO INT(LEN(Text$) / Break) + 1
+LOCATE Zeilen + i - 1, Spalten
+ecr = ecr + Break
+PRINT MID$(Text$, ecr, Break)
+NEXT i
+ecr = 0
+TextBox$ = ""
+
+TextScale = EndZeile + 1
+END FUNCTION
+
+SUB TimeLock (Status)
+STATIC On.too
+STATIC tm
+Radius = 14 * 2
+Farbe1 = 12
+Farbe2 = 9
+x = 319 - Radius
+y = 174 - Radius
+
+SELECT CASE Status
+CASE 1:
+'Falls es das erste Mal ist, muss der Hintergrund noch gespeichert werden:
+IF On.too = 0 THEN On.too = 1: GET (319 - Radius, 174 - Radius)-(319 + Radius, 174 + Radius), Hintergrund
+
+LINE (x + Radius - Radius, y + Radius - Radius)-(x + Radius + Radius, y + Radius + Radius), 0, BF
+IF tm = 1 THEN tm = 0 ELSE tm = 1
+
+IF tm = 0 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe1
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe1
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe1, , , .9
+PAINT (x + Radius + 1, y + Radius), Farbe1
+PAINT (x + Radius - 1, y + Radius), Farbe1
+END IF
+
+
+IF tm = 1 THEN
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 2)-(x + Radius / 3 * 4, y + Radius / 3 * 4), Farbe2
+LINE (x + Radius / 3 * 2, y + Radius / 3 * 4)-(x + Radius / 3 * 4, y + Radius / 3 * 2), Farbe2
+CIRCLE (x + Radius, y + Radius), Radius / 2, Farbe2, , , .9
+PAINT (x + Radius, y + Radius + 1), Farbe2
+PAINT (x + Radius, y + Radius - 1), Farbe2
+END IF
+CASE 0: IF On.too <> 0 THEN On.too = 0: PUT (319 - Radius, 174 - Radius), Hintergrund, PSET: StoppUhr(1) = 0
+END SELECT
+END SUB
+
+FUNCTION Trim$ (Variable$, Trennzeichen$, a)
+
+mcr = 0
+gef = 0
+FOR i = 1 TO LEN(Variable$)
+mcr = mcr + 1
+a$ = MID$(Variable$, mcr)
+IF LEFT$(a$, 1) = Trennzeichen$ THEN gef = gef + 1
+IF gef = a - 1 THEN EXIT FOR
+NEXT
+IF LEFT$(a$, 1) = Trennzeichen$ THEN a$ = MID$(a$, 2) ELSE a$ = a$
+
+mcr = 0
+FOR i = 1 TO LEN(a$)
+mcr = mcr + 1
+IF MID$(a$, mcr, 1) = Trennzeichen$ THEN a$ = LEFT$(a$, mcr - 1): EXIT FOR
+NEXT
+
+Trim$ = a$
+
+END FUNCTION
+
+SUB WindowState
+LINE (19, 19)-(619, 329), 0, BF
+'Fenster:
+LINE (19, 19)-(619, 329), Fensterfarbe, B
+'Schatten:
+LINE (20, 20)-(618, 20), Schattenfarbe
+LINE (20, 20)-(20, 328), Schattenfarbe
+'Rand:
+LINE (620, 330)-(19, 330), Randfarbe
+LINE (620, 330)-(620, 19), Randfarbe
+
+EBox.left = 589: EBox.top = 306
+END SUB
+
