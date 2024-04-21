@@ -6,6 +6,10 @@ LaOS Version 6.13
 Dies ist LaOS Version 6.13
 Installieren Sie LaOS mit INSTALL.BAT oder INSTALL.EXE
 
+How to Code with LaOS 6
+========================
+
+Open OSCODE6.BAS and start coding in the sub procedure ->Main. The procedure contains an example.
 
 Fanpost
 ========
