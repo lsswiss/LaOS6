@@ -17,14 +17,10 @@ How to Code with LaOS 6
 
 Open OSCODE6.BAS and start coding in the sub procedure ->Main. The procedure contains an example.
 
-Fanpost
+Fan Mail
 ========
 
-Bitte senden Sie Fanpost an:
-
-Urs Langmeier                           Tel. +41 (0)1 861 15 70
-Obergasse 3                             Handy: +41 (0)79 512 70 67
-CH-8180 Buelach				                  Email: laos@datacomm.ch
+Dear QBasic Community! Thank you very much for all of your fan mail! I appreciate it very much.
 
 
 Support
